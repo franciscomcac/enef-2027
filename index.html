@@ -40,7 +40,11 @@
   .navToggle.active span:nth-child(3){transform:translateY(-5.5px) rotate(-45deg);}
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important;} html{scroll-behavior:auto;} }
 
-  .grain-overlay{position:fixed;inset:0;z-index:118;pointer-events:none;opacity:.045;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px 180px;}
+  /* mix-blend-mode forces the compositor to re-blend this layer with everything under it
+     on every frame it's visible, including every scroll frame — same isolation trick as
+     the nav above so that blending stays scoped to this one texture instead of dragging
+     on the rest of the page's compositing. */
+  .grain-overlay{position:fixed;inset:0;z-index:118;pointer-events:none;opacity:.045;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px 180px;transform:translateZ(0);}
 
   /* intro reveal */
   #introVeil{position:fixed;inset:0;z-index:200;background:var(--ink);overflow:hidden;}
@@ -98,7 +102,12 @@
   .cursor-label span{background:var(--accent);color:var(--paper);padding:7px 13px;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap;transform:translate(18px,14px);display:inline-block;}
 
   /* nav */
-  nav{position:sticky;top:0;left:0;right:0;z-index:80;display:flex;flex-wrap:wrap;align-items:stretch;background:rgba(242,239,231,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--ink);}
+  /* backdrop-filter has to re-sample whatever scrolls underneath every single frame the
+     nav is visible — pinning it to its own compositor layer (transform:translateZ(0) +
+     will-change) keeps that sampling/blur cost isolated instead of forcing the browser
+     to re-evaluate it as part of the page's general paint, which is what read as a
+     smeared/lagging "motion blur" during fast scrolling. Same blur radius, same look. */
+  nav{position:sticky;top:0;left:0;right:0;z-index:80;display:flex;flex-wrap:wrap;align-items:stretch;background:rgba(242,239,231,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--ink);transform:translateZ(0);will-change:backdrop-filter;}
   nav .logo{display:flex;align-items:center;padding:0 20px;border-right:1px solid var(--ink);font-size:19px;letter-spacing:.01em;}
   nav .logo b{color:var(--accent);font-weight:400;}
   nav .links{display:flex;align-items:stretch;flex:1;font-size:10px;letter-spacing:.18em;text-transform:uppercase;}
@@ -1168,18 +1177,35 @@
         { el: document.getElementById("scopeStack"),fx: 10, fy: 8 },
         { el: document.getElementById("heroWordmark"), fx: -6, fy: 4 }
       ].filter(function(l){ return !!l.el; });
-      hero.addEventListener("pointermove", function(e){
+      // quickTo builds one lightweight setter per property instead of spinning up a
+      // brand-new tween on every pointermove — a mouse/trackpad can fire that event
+      // at 120Hz+, far above the screen's redraw rate, so the old gsap.to-per-event
+      // approach was doing many times more interpolation work than could ever be seen.
+      layers.forEach(function(l){
+        l.setX = gsap.quickTo(l.el, "x", { duration:.8, ease:"power3.out" });
+        l.setY = gsap.quickTo(l.el, "y", { duration:.8, ease:"power3.out" });
+      });
+      // rAF-batch the raw events too: only the latest pointer position each frame is
+      // ever applied, and the (layout-reading) getBoundingClientRect call moves off the
+      // hot path into the frame callback, so it never runs more often than the screen
+      // can actually show a new position.
+      var pending = null, ticking = false;
+      function apply(){
+        ticking = false;
+        if (!pending) return;
         var r = hero.getBoundingClientRect();
-        var cx = ((e.clientX - r.left) / r.width) * 2 - 1;
-        var cy = ((e.clientY - r.top) / r.height) * 2 - 1;
-        layers.forEach(function(l){
-          gsap.to(l.el, { x: cx*l.fx, y: cy*l.fy, duration:.9, ease:"power3.out", overwrite:true });
-        });
+        var cx = ((pending.x - r.left) / r.width) * 2 - 1;
+        var cy = ((pending.y - r.top) / r.height) * 2 - 1;
+        pending = null;
+        layers.forEach(function(l){ l.setX(cx*l.fx); l.setY(cy*l.fy); });
+      }
+      hero.addEventListener("pointermove", function(e){
+        pending = { x: e.clientX, y: e.clientY };
+        if (!ticking){ ticking = true; requestAnimationFrame(apply); }
       }, { passive:true });
       function resetHero(){
-        layers.forEach(function(l){
-          gsap.to(l.el, { x:0, y:0, duration:.7, ease:"power2.out", overwrite:true });
-        });
+        pending = null;
+        layers.forEach(function(l){ l.setX(0); l.setY(0); });
       }
       hero.addEventListener("pointerleave", resetHero);
       hero.addEventListener("pointerup", resetHero);
@@ -1197,20 +1223,34 @@
         { el: document.getElementById("phBlue"),   fx: 24, fy: 16 },
         { el: document.getElementById("phCampus"), fx: 12, fy: 9 }
       ].filter(function(l){ return !!l.el; });
-      imgs.forEach(function(l){ gsap.set(l.el, { scale: 1.22 }); });
+      imgs.forEach(function(l){
+        gsap.set(l.el, { scale: 1.22 });
+        l.setX = gsap.quickTo(l.el, "x", { duration:.8, ease:"power3.out" });
+        l.setY = gsap.quickTo(l.el, "y", { duration:.8, ease:"power3.out" });
+      });
       band.addEventListener("pointerenter", function(){ band.classList.add("wc"); });
-      band.addEventListener("pointermove", function(e){
+      // same rAF-batching + quickTo pattern as heroParallax: one applied update per
+      // frame no matter how many raw pointermove events the browser delivers.
+      var pending = null, ticking = false;
+      function apply(){
+        ticking = false;
+        if (!pending) return;
         var r = band.getBoundingClientRect();
-        var cx = ((e.clientX - r.left) / r.width) * 2 - 1;
-        var cy = ((e.clientY - r.top) / r.height) * 2 - 1;
-        imgs.forEach(function(l){
-          gsap.to(l.el, { x: cx*l.fx, y: cy*l.fy, scale:1.22, duration:.9, ease:"power3.out", overwrite:true });
-        });
-        gsap.to(band, { "--tiltX": (cy*-3)+"deg", "--tiltY": (cx*3)+"deg", duration:.9, ease:"power3.out", overwrite:true });
+        var cx = ((pending.x - r.left) / r.width) * 2 - 1;
+        var cy = ((pending.y - r.top) / r.height) * 2 - 1;
+        pending = null;
+        imgs.forEach(function(l){ l.setX(cx*l.fx); l.setY(cy*l.fy); });
+        gsap.to(band, { "--tiltX": (cy*-3)+"deg", "--tiltY": (cx*3)+"deg", duration:.8, ease:"power3.out", overwrite:true });
+      }
+      band.addEventListener("pointermove", function(e){
+        pending = { x: e.clientX, y: e.clientY };
+        if (!ticking){ ticking = true; requestAnimationFrame(apply); }
       }, { passive:true });
       function resetPortholes(){
-        imgs.forEach(function(l){ gsap.to(l.el, { x:0, y:0, scale:1.22, duration:.7, ease:"power2.out", overwrite:true,
-          onComplete: function(){ band.classList.remove("wc"); } }); });
+        pending = null;
+        imgs.forEach(function(l){ l.setX(0); l.setY(0); });
+        gsap.to(band, { "--tiltX":"0deg", "--tiltY":"0deg", duration:.7, ease:"power2.out", overwrite:true,
+          onComplete: function(){ band.classList.remove("wc"); } });
       }
       band.addEventListener("pointerleave", resetPortholes);
       band.addEventListener("pointerup", resetPortholes);
@@ -1251,19 +1291,37 @@
     safe("scheduleTilt", function(){
       var wrap = document.getElementById("railWrap");
       if (!wrap) return;
+      // rAF-batch the raw pointermove events (same idea as the hero/porthole parallax)
+      // so this fires at most once per rendered frame no matter how fast the browser
+      // delivers them. NOTE: this one stays a plain gsap.to rather than quickTo — quickTo
+      // on a 3D-transform property (rotateX/rotateY) combined with a plain y on the same
+      // target hits a real recursion bug in GSAP's transform parser ("Maximum call stack
+      // size exceeded" in _parseTransform); rAF-batching alone already removes the vast
+      // majority of the redundant work, so it isn't needed here for the fix to land.
+      var pending = null, ticking = false;
+      function apply(){
+        ticking = false;
+        if (!pending) return;
+        var col = pending.col, x = pending.x, y = pending.y;
+        pending = null;
+        if (!col.isConnected) return;
+        col.classList.add("wc");
+        var r = col.getBoundingClientRect();
+        var cx = ((x - r.left) / r.width) * 2 - 1;
+        var cy = ((y - r.top) / r.height) * 2 - 1;
+        gsap.to(col, { rotateX: cy*-5, rotateY: cx*5, y:-4, transformPerspective:900, transformOrigin:"center", duration:.5, ease:"power3.out", overwrite:true });
+      }
       wrap.addEventListener("pointermove", function(e){
         var col = e.target.closest(".day-col");
         if (!col) return;
-        col.classList.add("wc");
-        var r = col.getBoundingClientRect();
-        var cx = ((e.clientX - r.left) / r.width) * 2 - 1;
-        var cy = ((e.clientY - r.top) / r.height) * 2 - 1;
-        gsap.to(col, { rotateX: cy*-5, rotateY: cx*5, y:-4, transformPerspective:900, transformOrigin:"center", duration:.5, ease:"power3.out", overwrite:true });
+        pending = { col: col, x: e.clientX, y: e.clientY };
+        if (!ticking){ ticking = true; requestAnimationFrame(apply); }
       }, { passive:true });
       wrap.addEventListener("pointerout", function(e){
         var col = e.target.closest(".day-col");
         if (!col) return;
         if (col.contains(e.relatedTarget)) return;
+        if (pending && pending.col === col) pending = null;
         gsap.to(col, { rotateX:0, rotateY:0, y:0, duration:.6, ease:"power2.out", overwrite:true,
           onComplete: function(){ col.classList.remove("wc"); } });
       });
