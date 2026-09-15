@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>Contactos — ENEF 2027</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14161A; --paper:#F2EFE7; --accent:#1F44FF;
+    --ink-soft:rgba(20,22,26,.62); --ink-faint:rgba(20,22,26,.18); --paper-soft:rgba(242,239,231,.65);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+  html{overflow-x:hidden;}
+  body{font-family:'Newsreader',Georgia,serif;font-weight:300;overflow-x:clip;position:relative;min-height:100vh;display:flex;flex-direction:column;}
+  ::selection{background:var(--accent);color:var(--paper);}
+  a{color:inherit;text-decoration:none;}
+  h1,h2{text-wrap:balance;}
+  p{text-wrap:pretty;}
+  .mono{font-family:'Space Mono',ui-monospace,monospace;}
+  .display{font-family:'Anton',Impact,sans-serif;text-transform:uppercase;}
+  img{max-width:100%;display:block;}
+  button{font:inherit;color:inherit;}
+
+  .grain-overlay{position:fixed;inset:0;z-index:118;pointer-events:none;opacity:.045;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px 180px;}
+
+  /* nav — same bar as the main site, so arriving here never feels like a different product */
+  .navToggle{display:none;width:48px;border:none;border-left:1px solid var(--ink);background:none;align-items:center;justify-content:center;flex-direction:column;gap:4px;cursor:pointer;}
+  .navToggle span{display:block;width:19px;height:1.5px;background:var(--ink);transition:transform .25s ease,opacity .2s ease;}
+  .navToggle.active span:nth-child(1){transform:translateY(5.5px) rotate(45deg);}
+  .navToggle.active span:nth-child(2){opacity:0;}
+  .navToggle.active span:nth-child(3){transform:translateY(-5.5px) rotate(-45deg);}
+  nav{position:sticky;top:0;left:0;right:0;z-index:80;display:flex;flex-wrap:wrap;align-items:stretch;background:rgba(242,239,231,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--ink);}
+  nav .logo{display:flex;align-items:center;padding:0 20px;border-right:1px solid var(--ink);font-size:19px;letter-spacing:.01em;}
+  nav .logo b{color:var(--accent);font-weight:400;}
+  nav .links{display:flex;align-items:stretch;flex:1;font-size:10px;letter-spacing:.18em;text-transform:uppercase;}
+  nav .links a{display:flex;align-items:center;padding:15px 18px;border-right:1px solid var(--ink-faint);transition:background .2s,color .2s;}
+  nav .links a:hover{background:var(--ink);color:var(--paper);}
+  nav .links a.current{background:var(--ink);color:var(--paper);}
+  nav .langbtn{background:none;border:none;border-left:1px solid var(--ink);padding:0 16px;cursor:pointer;font-size:10px;letter-spacing:.14em;}
+  nav .cta{background:var(--accent);color:var(--paper);border:none;padding:0 26px;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;transition:background .2s;display:flex;align-items:center;}
+  nav .cta:hover{background:var(--ink);}
+
+  main{flex:1;}
+
+  /* header */
+  .page-head{padding:clamp(56px,8vw,110px) clamp(18px,4vw,42px) clamp(50px,6vw,80px);border-bottom:1px solid var(--ink);}
+  .sec-kicker{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:16px;}
+  .page-title{font-size:clamp(40px,7vw,88px);line-height:.94;margin:0;}
+  .page-sub{font-size:clamp(17px,1.8vw,20px);line-height:1.5;margin:18px 0 0;max-width:32em;opacity:.7;}
+
+  /* contact grid */
+  .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,5vw,70px);padding:clamp(50px,6vw,80px) clamp(18px,4vw,42px);align-items:start;}
+  .contact-block{margin-bottom:clamp(26px,3vw,34px);}
+  .contact-block .head{font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;margin-bottom:10px;}
+  .contact-email{font-family:'Newsreader',serif;font-size:clamp(20px,2.6vw,28px);color:var(--accent);border-bottom:1px solid transparent;transition:border-color .2s;}
+  .contact-email:hover{border-color:var(--accent);}
+  .contact-addr{font-size:15.5px;line-height:1.7;opacity:.85;}
+  .contact-social{display:flex;flex-wrap:wrap;gap:9px;}
+  .contact-social a{border:1px solid var(--ink);padding:9px 15px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;transition:background .2s,color .2s;}
+  .contact-social a:hover{background:var(--ink);color:var(--paper);}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.5;margin-bottom:7px;}
+  .field input,.field textarea{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(20,22,26,.3);color:var(--ink);padding:9px 2px;font-family:'Newsreader',serif;font-size:19px;outline:none;}
+  .field textarea{font-size:17px;line-height:1.5;resize:vertical;min-height:110px;}
+  .field input:focus,.field textarea:focus{border-color:var(--accent);}
+  .contact-submit{width:100%;margin-top:8px;background:var(--accent);color:var(--paper);border:none;padding:17px;cursor:pointer;font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;transition:background .2s;}
+  .contact-submit:hover{background:var(--ink);}
+  .contact-note{font-size:11px;line-height:1.6;opacity:.5;margin-top:12px;}
+
+  footer{border-top:1px solid var(--ink);padding:26px clamp(18px,4vw,42px);display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;}
+  footer a:hover{color:var(--accent);}
+
+  @media (max-width:880px){
+    .navToggle{display:flex;}
+    nav .links{display:none;width:100%;order:10;flex-direction:column;background:var(--paper);}
+    nav .links.open{display:flex;}
+    nav .links a{padding:16px clamp(18px,4vw,32px);border-right:none;border-bottom:1px solid var(--ink-faint);}
+    nav .cta{padding:0 16px;font-size:9.5px;}
+    nav .langbtn{padding:0 12px;margin-left:auto;}
+    .contact-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+  <div class="grain-overlay" aria-hidden="true"></div>
+
+  <nav>
+    <a href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#top" class="logo">ENEF<b>27</b></a>
+    <div class="links" id="navLinks">
+      <a href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#atividades" class="mono" id="lnkProg">Programa</a>
+      <a href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#packs" class="mono" id="lnkPacks">Packs</a>
+      <a href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#horario" class="mono" id="lnkSched">Horário</a>
+      <a href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#equipa" class="mono" id="lnkTeam">Equipa</a>
+      <a href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#faqs" class="mono" id="lnkFaqs">FAQ</a>
+      <a href="https://claude.ai/code/artifact/bf1601e9-ee9f-476d-841f-82055529d8f2" class="mono current" id="lnkContact">Contactos</a>
+    </div>
+    <button class="langbtn" id="langBtn"><span id="langPt" style="color:var(--accent)">PT</span><span style="opacity:.35">/</span><span id="langEn">EN</span></button>
+    <a class="cta mono" id="ctaNav" href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#packs">Inscrever</a>
+    <button class="navToggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </nav>
+
+  <main>
+    <div class="page-head">
+      <div class="sec-kicker mono" id="kicker">Contactos</div>
+      <h1 class="page-title display" id="title">Fala com o Physis.</h1>
+      <p class="page-sub" id="sub">Dúvidas sobre inscrições, packs, o programa ou patrocínios? A organização responde em pessoa.</p>
+    </div>
+
+    <div class="contact-grid">
+      <div class="contact-l">
+        <div class="contact-block">
+          <div class="head mono" id="emailLabel">Correio eletrónico</div>
+          <a class="contact-email" href="mailto:coenef.2027@physis.com.pt">coenef.2027@physis.com.pt</a>
+        </div>
+        <div class="contact-block">
+          <div class="head mono" id="addrLabel">Morada</div>
+          <div class="contact-addr" id="contactAddr"></div>
+        </div>
+        <div class="contact-block">
+          <div class="head mono" id="socialLabel">Redes</div>
+          <div class="contact-social">
+            <a href="https://instagram.com/enef2027" target="_blank" rel="noopener">Instagram</a>
+            <a href="https://discord.gg/enef2027" target="_blank" rel="noopener">Discord</a>
+            <a href="https://linkedin.com/company/enef2027" target="_blank" rel="noopener">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+      <form class="contact-form" id="contactForm">
+        <div class="field">
+          <label id="ctL0"></label>
+          <input id="ctF0" required>
+        </div>
+        <div class="field">
+          <label id="ctL1"></label>
+          <input id="ctF1" type="email" required>
+        </div>
+        <div class="field">
+          <label id="ctL2"></label>
+          <input id="ctF2" required>
+        </div>
+        <div class="field">
+          <label id="ctL3"></label>
+          <textarea id="ctF3" required></textarea>
+        </div>
+        <button type="submit" class="contact-submit mono" id="ctaContact"></button>
+        <p class="contact-note mono" id="note">Vamos abrir o teu cliente de email com a mensagem pronta a enviar.</p>
+      </form>
+    </div>
+  </main>
+
+  <footer class="mono">
+    <span>ENEF 2027 · Lisboa</span>
+    <a href="https://claude.ai/code/artifact/f9cc0c1f-254f-459b-99fb-243f67031b7a#top">← Voltar ao site</a>
+  </footer>
+
+<script>
+(function(){
+  "use strict";
+  var COPY = {
+    pt: {
+      navProg:"Programa", navPacks:"Packs", navSched:"Horário", navTeam:"Equipa", navFaqs:"FAQ", navContact:"Contactos", cta:"Inscrever",
+      kicker:"Contactos",
+      title:"Fala com o Physis.",
+      sub:"Dúvidas sobre inscrições, packs, o programa ou patrocínios? A organização responde em pessoa.",
+      emailLabel:"Correio eletrónico", addrLabel:"Morada", socialLabel:"Redes",
+      addr:["Instituto Superior Técnico","Departamento de Física, Campus Alameda","Av. Rovisco Pais 1, 1049-001 Lisboa"],
+      fields:[["Nome","Ex: Ana Silva"],["Email","Ex: ana@exemplo.pt"],["Assunto","Ex: Dúvida sobre packs"],["Mensagem","Escreve a tua mensagem..."]],
+      submit:"Enviar mensagem →",
+      note:"Vamos abrir o teu cliente de email com a mensagem pronta a enviar.",
+      back:"← Voltar ao site"
+    },
+    en: {
+      navProg:"Programme", navPacks:"Packs", navSched:"Schedule", navTeam:"Team", navFaqs:"FAQ", navContact:"Contact", cta:"Register",
+      kicker:"Contact",
+      title:"Talk to Physis.",
+      sub:"Questions about registration, packs, the programme or sponsorship? The organisers answer in person.",
+      emailLabel:"Email", addrLabel:"Address", socialLabel:"Social",
+      addr:["Instituto Superior Técnico","Physics Department, Alameda Campus","Av. Rovisco Pais 1, 1049-001 Lisbon"],
+      fields:[["Name","Ex: Ana Silva"],["Email","Ex: ana@example.com"],["Subject","Ex: Question about packs"],["Message","Write your message..."]],
+      submit:"Send message →",
+      note:"This opens your email client with the message ready to send.",
+      back:"← Back to site"
+    }
+  };
+  var lang = "pt";
+  function t(){ return COPY[lang]; }
+
+  function render(){
+    document.getElementById("langPt").style.color = lang==="pt" ? "var(--accent)" : "rgba(20,22,26,.42)";
+    document.getElementById("langEn").style.color = lang==="en" ? "var(--accent)" : "rgba(20,22,26,.42)";
+    document.documentElement.lang = lang;
+    var c = t();
+    document.getElementById("lnkProg").textContent = c.navProg;
+    document.getElementById("lnkPacks").textContent = c.navPacks;
+    document.getElementById("lnkSched").textContent = c.navSched;
+    document.getElementById("lnkTeam").textContent = c.navTeam;
+    document.getElementById("lnkFaqs").textContent = c.navFaqs;
+    document.getElementById("lnkContact").textContent = c.navContact;
+    document.getElementById("ctaNav").textContent = c.cta;
+    document.getElementById("kicker").textContent = c.kicker;
+    document.getElementById("title").textContent = c.title;
+    document.getElementById("sub").textContent = c.sub;
+    document.getElementById("emailLabel").textContent = c.emailLabel;
+    document.getElementById("addrLabel").textContent = c.addrLabel;
+    document.getElementById("socialLabel").textContent = c.socialLabel;
+    document.getElementById("contactAddr").innerHTML = c.addr.map(function(l){ return "<div>"+l+"</div>"; }).join("");
+    ["ctL0","ctL1","ctL2","ctL3"].forEach(function(id,i){ document.getElementById(id).textContent = c.fields[i][0]; });
+    ["ctF0","ctF1","ctF2","ctF3"].forEach(function(id,i){ document.getElementById(id).placeholder = c.fields[i][1]; });
+    document.getElementById("ctaContact").textContent = c.submit;
+    document.getElementById("note").textContent = c.note;
+    var backLink = document.querySelector("footer a");
+    if (backLink) backLink.textContent = c.back;
+  }
+
+  document.getElementById("langBtn").addEventListener("click", function(){
+    lang = lang==="pt" ? "en" : "pt";
+    render();
+  });
+
+  render();
+
+  // mobile nav: the link row collapses behind this hamburger toggle below 880px
+  (function(){
+    var toggle = document.getElementById("navToggle");
+    var links = document.getElementById("navLinks");
+    function closeMenu(){
+      links.classList.remove("open");
+      toggle.classList.remove("active");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+    toggle.addEventListener("click", function(){
+      var open = links.classList.toggle("open");
+      toggle.classList.toggle("active", open);
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    window.addEventListener("resize", function(){
+      if (window.innerWidth > 880) closeMenu();
+    });
+  })();
+
+  // no backend to receive the form, so submitting opens the visitor's own email
+  // client with the message pre-filled — genuinely works, rather than faking a
+  // "message sent" confirmation that never actually sends.
+  document.getElementById("contactForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = document.getElementById("ctF0").value.trim();
+    var email = document.getElementById("ctF1").value.trim();
+    var subject = document.getElementById("ctF2").value.trim();
+    var message = document.getElementById("ctF3").value.trim();
+    var body = message + "\n\n— " + name + " (" + email + ")";
+    var mailto = "mailto:coenef.2027@physis.com.pt"
+      + "?subject=" + encodeURIComponent("[ENEF 2027] " + subject)
+      + "&body=" + encodeURIComponent(body);
+    window.location.href = mailto;
+  });
+})();
+</script>
+</body>
+</html>

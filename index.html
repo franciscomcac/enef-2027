@@ -1,0 +1,1386 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>ENEF 2027</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Space+Mono:wght@400;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14161A; --paper:#F2EFE7; --accent:#1F44FF;
+    --line1:#C4362F; --line2:#E8A93C; --line3:#2C93A8; --line4:#4B3FA6;
+    --ink-soft:rgba(20,22,26,.62); --ink-faint:rgba(20,22,26,.18); --paper-soft:rgba(242,239,231,.65); --paper-faint:rgba(242,239,231,.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+  /* overflow-x on body alone doesn't reliably stop the ROOT scrolling box from scrolling
+     horizontally — clip specifically isn't propagated to the viewport the way hidden is, so a
+     phone could still be dragged sideways past whatever bleeds off an edge (tilted photos, the
+     rotated ticker, decorative blobs). Guarding html directly makes it airtight. */
+  html{overflow-x:hidden;scroll-behavior:smooth;}
+  /* nav is position:sticky, so a smooth-scrolled anchor needs this much clearance or its
+     heading lands tucked underneath the bar; --nav-h is set from the nav's real height in JS */
+  #top,#atividades,#packs,#horario,#equipa,#faqs,#local{scroll-margin-top:var(--nav-h,72px);}
+  body{font-family:'Newsreader',Georgia,serif;font-weight:300;overflow-x:clip;position:relative;cursor:none;}
+  ::selection{background:var(--accent);color:var(--paper);}
+  a{color:inherit;text-decoration:none;}
+  h1,h2,h3{text-wrap:balance;}
+  p{text-wrap:pretty;}
+  .mono{font-family:'Space Mono',ui-monospace,monospace;}
+  .display{font-family:'Anton',Impact,sans-serif;text-transform:uppercase;}
+  .hand{font-family:'Caveat',cursive;}
+  img{max-width:100%;display:block;}
+  button{font:inherit;color:inherit;}
+  .navToggle{display:none;width:48px;border:none;border-left:1px solid var(--ink);background:none;align-items:center;justify-content:center;flex-direction:column;gap:4px;cursor:pointer;}
+  .navToggle span{display:block;width:19px;height:1.5px;background:var(--ink);transition:transform .25s ease,opacity .2s ease;}
+  .navToggle.active span:nth-child(1){transform:translateY(5.5px) rotate(45deg);}
+  .navToggle.active span:nth-child(2){opacity:0;}
+  .navToggle.active span:nth-child(3){transform:translateY(-5.5px) rotate(-45deg);}
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important;} html{scroll-behavior:auto;} }
+
+  .grain-overlay{position:fixed;inset:0;z-index:118;pointer-events:none;opacity:.045;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px 180px;}
+
+  /* intro reveal */
+  #introVeil{position:fixed;inset:0;z-index:200;background:var(--ink);overflow:hidden;}
+  /* the ring and the word are separate, independently-centered elements (not a flex-stacked
+     pair) so the "27" ring's own center always sits at the exact viewport center — the same
+     point the blob grows from. Stacking them in one flex column used to center the *pair* as a
+     block, which pushed the ring above true-center to make room for the word underneath it,
+     so the ring and the blob were never actually concentric. */
+  #introVeil .intro-ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;}
+  #introVeil .intro-ring svg{display:block;}
+  #introVeil .intro-word{position:absolute;left:50%;top:50%;transform:translate(-50%,44px);z-index:2;font-family:'Anton',sans-serif;color:var(--paper);font-size:13px;letter-spacing:.32em;text-transform:uppercase;opacity:.85;white-space:nowrap;}
+  /* starts a true circle so it's concentric with the round "27" ring at rest; only becomes
+     organic/square once it's already growing to swallow the screen, where the shape no longer
+     needs to match the mark */
+  .intro-blob{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:var(--accent);transform:scale(0);z-index:1;}
+
+  /* hero depth layers */
+  .hero-blobs{position:absolute;inset:0;overflow:visible;pointer-events:none;z-index:0;}
+  .hero-blobs svg{position:absolute;will-change:transform;}
+  .hb1{width:52vw;max-width:640px;top:-14%;left:-10%;opacity:.9;}
+  .hb2{width:30vw;max-width:380px;bottom:-18%;right:6%;opacity:.7;}
+  .scope-stack{position:relative;z-index:1;}
+  .scope-backer{position:absolute;inset:0;background:var(--accent);border:1px solid var(--ink);transform:rotate(4deg) translate(16px,12px);z-index:0;}
+  .hero-grid{position:relative;z-index:1;}
+  .kicker,.wordmark,.hero-lead,.daychips,.venuerow{position:relative;z-index:1;}
+
+  /* porthole band: imagery glimpsed through cut shapes in a solid layer */
+  .porthole-band{--tiltX:0deg;--tiltY:0deg;position:relative;height:clamp(220px,26vw,340px);background:var(--ink);overflow:hidden;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;align-items:center;justify-content:space-evenly;padding:0 4vw;margin-top:0;perspective:1100px;}
+  .porthole-frame{position:relative;flex:0 0 auto;will-change:transform;filter:drop-shadow(0 18px 34px rgba(0,0,0,.5));}
+  .porthole-frame::before{content:"";position:absolute;inset:0;border-radius:50%;background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='rim' x1='15%25' y1='8%25' x2='88%25' y2='95%25'><stop offset='0%25' stop-color='%23f4f4f6'/><stop offset='20%25' stop-color='%23c3c6cc'/><stop offset='42%25' stop-color='%2375787f'/><stop offset='58%25' stop-color='%232e3036'/><stop offset='78%25' stop-color='%23888b91'/><stop offset='100%25' stop-color='%23202226'/></linearGradient></defs><circle cx='50' cy='50' r='45.5' fill='none' stroke='url(%23rim)' stroke-width='9'/><circle cx='50' cy='50' r='41' fill='none' stroke='%230c0d10' stroke-width='1.4' opacity='.55'/><circle cx='50' cy='50' r='41.8' fill='none' stroke='%23ffffff' stroke-width='0.9' opacity='.28'/><circle cx='50.00' cy='5.50' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='50.35' cy='5.92' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='69.31' cy='9.91' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='69.44' cy='10.44' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='84.79' cy='22.25' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='84.68' cy='22.79' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='93.38' cy='40.10' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='93.05' cy='40.54' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='93.38' cy='59.90' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='92.89' cy='60.15' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='84.79' cy='77.75' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='84.24' cy='77.76' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='69.31' cy='90.09' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='68.81' cy='89.87' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='50.00' cy='94.50' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='49.65' cy='94.08' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='30.69' cy='90.09' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='30.56' cy='89.56' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='15.21' cy='77.75' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='15.32' cy='77.21' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='6.62' cy='59.90' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='6.95' cy='59.46' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='6.62' cy='40.10' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='7.11' cy='39.85' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='15.21' cy='22.25' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='15.76' cy='22.24' r='0.7' fill='%239a9da3' opacity='.75'/><circle cx='30.69' cy='9.91' r='2.15' fill='%23202226' stroke='%230c0d10' stroke-width='0.4'/><circle cx='31.19' cy='10.13' r='0.7' fill='%239a9da3' opacity='.75'/></svg>");background-size:100% 100%;pointer-events:none;z-index:3;}
+  .porthole-hole{position:absolute;inset:10%;border-radius:50%;overflow:hidden;box-shadow:inset 0 0 22px rgba(0,0,0,.6),inset 0 0 5px rgba(0,0,0,.85);}
+  .porthole-hole::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.26),transparent 45%);pointer-events:none;z-index:2;}
+  .porthole-hole::after{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(115deg,rgba(255,255,255,.16) 0%,transparent 20%,transparent 80%,rgba(255,255,255,.06) 100%);box-shadow:inset 0 0 0 1px rgba(242,239,231,.14);pointer-events:none;z-index:2;}
+  .porthole-hole img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.12) contrast(1.05);will-change:transform;}
+  .porthole-frame.ph1{width:clamp(110px,15vw,190px);height:clamp(110px,15vw,190px);transform:translateY(12%) rotateX(var(--tiltX)) rotateY(var(--tiltY));}
+  .porthole-frame.ph2{width:clamp(150px,20vw,250px);height:clamp(150px,20vw,250px);transform:translateY(-10%) rotateX(var(--tiltX)) rotateY(var(--tiltY));}
+  .porthole-frame.ph3{width:clamp(100px,13.5vw,175px);height:clamp(100px,13.5vw,175px);transform:translateY(8%) rotateX(var(--tiltX)) rotateY(var(--tiltY));}
+  .porthole-cap{position:absolute;left:clamp(18px,4vw,42px);bottom:14px;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--paper-soft);z-index:2;}
+
+  @keyframes blip{0%,44%{opacity:1;}50%,94%{opacity:.14;}100%{opacity:1;}}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  /* cursor */
+  .cursor-dot{position:fixed;top:0;left:0;z-index:210;pointer-events:none;mix-blend-mode:difference;will-change:transform,opacity;opacity:0;transition:opacity .25s ease;}
+  .cursor-dot i{display:block;width:11px;height:11px;border-radius:50%;background:var(--paper);margin:-5.5px 0 0 -5.5px;}
+  /* a normal-blend ring, kept OUTSIDE the difference-blended dot's stacking context on purpose —
+     otherwise it gets swallowed into the same invert effect and the cursor reads as a stray dot
+     with no visible connection to "this is a pointer" whenever it sits over a light background.
+     Both start at opacity:0 and only fade in once a real pointermove has fired, so nothing ever
+     renders as a static artifact sitting at a fixed screen position before the mouse actually moves. */
+  .cursor-ring{display:none;}
+  .cursor-label{position:fixed;top:0;left:0;z-index:209;pointer-events:none;opacity:0;transition:opacity .2s ease;will-change:transform;}
+  .cursor-label span{background:var(--accent);color:var(--paper);padding:7px 13px;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap;transform:translate(18px,14px);display:inline-block;}
+
+  /* nav */
+  nav{position:sticky;top:0;left:0;right:0;z-index:80;display:flex;flex-wrap:wrap;align-items:stretch;background:rgba(242,239,231,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--ink);}
+  nav .logo{display:flex;align-items:center;padding:0 20px;border-right:1px solid var(--ink);font-size:19px;letter-spacing:.01em;}
+  nav .logo b{color:var(--accent);font-weight:400;}
+  nav .links{display:flex;align-items:stretch;flex:1;font-size:10px;letter-spacing:.18em;text-transform:uppercase;}
+  nav .links a{display:flex;align-items:center;padding:15px 18px;border-right:1px solid var(--ink-faint);transition:background .2s,color .2s;}
+  nav .links a:hover{background:var(--ink);color:var(--paper);}
+  nav .langbtn{background:none;border:none;border-left:1px solid var(--ink);padding:0 16px;cursor:none;font-size:10px;letter-spacing:.14em;}
+  nav .cta{background:var(--accent);color:var(--paper);border:none;padding:0 26px;cursor:none;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;transition:background .2s;}
+  nav .cta:hover{background:var(--ink);}
+  nav .prog-track{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:transparent;}
+  nav .prog-bar{height:100%;width:0%;background:var(--accent);}
+
+  /* hero */
+  .hero{position:relative;padding:clamp(30px,5vw,58px) 0 0;}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(24px,4vw,54px);align-items:start;padding:0 clamp(18px,4vw,42px);}
+  .kicker{display:flex;align-items:center;gap:11px;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blip 2.2s steps(1,end) infinite;}
+  .wordmark{margin:22px 0 8px;position:relative;}
+  .wordmark .row{font-size:clamp(64px,13.5vw,200px);line-height:.86;letter-spacing:.005em;display:flex;}
+  .wordmark .row.blue{color:var(--accent);}
+  .wordmark .row span{display:inline-block;}
+  .wm-aside{position:absolute;right:2%;bottom:-6px;font-size:clamp(22px,2.6vw,32px);color:var(--accent);transform:rotate(-4deg);}
+  .hero-lead{font-size:clamp(19px,2vw,23px);line-height:1.42;margin:18px 0 22px;max-width:30em;}
+  .daychips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:26px;}
+  .daychips .chip{padding:14px 16px 15px;min-width:78px;}
+  .daychips .chip .num{font-family:'Anton',sans-serif;font-size:clamp(24px,2.6vw,34px);line-height:.95;}
+  .daychips .chip .nm{font-size:10px;letter-spacing:.08em;margin-top:5px;text-transform:uppercase;}
+  .venuerow{display:flex;flex-wrap:wrap;gap:22px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;}
+  .venuerow span.sep{opacity:.4;}
+
+  .scope{position:relative;transform:rotate(-1deg);transform-origin:50% 30%;box-shadow:0 26px 54px -16px rgba(20,22,26,.4),0 6px 16px rgba(20,22,26,.16);border:1px solid var(--ink);background:var(--paper);}
+  .scope-top{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;border-bottom:1px solid var(--ink);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.7;}
+  .scope-top .rec{display:flex;align-items:center;gap:6px;}
+  .scope-top .rec i{width:6px;height:6px;border-radius:50%;background:var(--line1);animation:blip 1.8s steps(1,end) infinite;display:block;}
+  .scope-photo{position:relative;height:clamp(230px,30vw,400px);overflow:hidden;}
+  .scope-photo img{position:absolute;inset:-8%;width:116%;height:116%;object-fit:cover;filter:saturate(1.08) contrast(1.05);}
+  .scope-photo .grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,22,26,0) 58%,rgba(20,22,26,.4) 100%);}
+  .scope-mid{display:flex;justify-content:space-between;padding:9px 15px 0;border-top:1px solid var(--ink);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.62;}
+  .cd-grid{display:grid;grid-template-columns:repeat(4,1fr);}
+  .cd-cell{padding:8px 13px 12px;border-right:1px solid var(--ink-faint);}
+  .cd-cell .row{display:flex;align-items:baseline;gap:4px;}
+  .cd-cell .v{font-weight:700;font-size:clamp(18px,2vw,26px);}
+  .cd-cell .u{font-size:10.5px;opacity:.55;}
+  .seal{position:absolute;right:16px;bottom:-30px;width:78px;height:78px;animation:spin 26s linear infinite;filter:drop-shadow(0 6px 10px rgba(20,22,26,.3));}
+
+  .wave{display:block;width:100%;height:56px;margin-top:clamp(50px,6vw,86px);}
+
+  .ticker-outer{overflow:hidden;position:relative;z-index:10;margin:-10px 0 0;}
+  .ticker-wrap{background:var(--ink);color:var(--paper);overflow:hidden;position:relative;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);}
+  .ticker-track{display:flex;width:max-content;padding:11px 0;animation:tickerScroll 26s linear infinite;}
+  @keyframes tickerScroll{from{transform:translateX(0);}to{transform:translateX(-20%);}}
+  .ticker-track span{padding:0 20px;white-space:nowrap;flex:0 0 auto;font-size:27px;line-height:1.2;letter-spacing:.01em;}
+
+  section{padding:0;}
+  .sec-head{padding:clamp(56px,7vw,96px) clamp(18px,4vw,42px) 40px;}
+  .sec-kicker{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:16px;}
+  .sec-title{font-size:clamp(34px,5.2vw,72px);line-height:.94;margin:0;}
+  .sec-sub{font-size:18px;line-height:1.5;margin:14px 0 0;max-width:32em;opacity:.7;}
+
+  .activities{background:var(--ink);color:var(--paper);padding-top:clamp(50px,6vw,80px);padding-bottom:clamp(70px,8vw,120px);}
+  .act-head{padding:0 clamp(18px,4vw,42px);display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:end;margin-bottom:56px;}
+  .act-row{position:relative;border-bottom:1px solid var(--paper-faint);overflow:hidden;}
+  .act-flood{position:absolute;inset:0;background:var(--accent);color:var(--paper);transform:translateY(101%);transition:transform .5s cubic-bezier(.2,.8,.25,1);}
+  .act-row:hover .act-flood{transform:translateY(0);}
+  .act-inner{position:relative;display:grid;grid-template-columns:64px 1fr 1.25fr 150px;gap:24px;align-items:center;padding:clamp(20px,3vw,34px) clamp(18px,4vw,42px);}
+  .act-num{font-size:10.5px;letter-spacing:.18em;align-self:start;padding-top:8px;opacity:.6;}
+  .act-title{font-size:clamp(24px,3vw,44px);line-height:.98;margin:0 0 8px;}
+  .act-tag{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;}
+  .act-body{font-size:17px;line-height:1.5;margin:0;opacity:.7;}
+  .act-photo{width:100%;height:96px;overflow:hidden;box-shadow:0 10px 22px -8px rgba(0,0,0,.5);border:1px solid var(--paper-faint);}
+  .act-photo img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.1);transition:filter .5s ease;}
+  .act-row:hover .act-photo img{filter:grayscale(.35) contrast(1.12);}
+  .stats-row{display:flex;flex-wrap:wrap;gap:8px 26px;padding:26px clamp(18px,4vw,42px) 0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;}
+  .stats-row b{color:var(--accent);font-weight:400;}
+  .stats-row span.lbl{opacity:.55;}
+
+  .packs{border-top:1px solid var(--ink);padding-bottom:clamp(70px,8vw,120px);}
+  .packs-grid{display:grid;grid-template-columns:1.15fr .85fr;border-top:1px solid var(--ink);}
+  .pack-list{border-right:1px solid var(--ink);}
+  .pack-row{width:100%;text-align:left;cursor:none;border:none;border-bottom:1px solid var(--ink);border-left:4px solid var(--ink-faint);display:grid;grid-template-columns:22px 1fr auto;gap:16px;align-items:center;padding:22px clamp(18px,4vw,30px);font-family:'Newsreader',serif;background:transparent;color:var(--ink);transition:background .25s ease,border-color .25s ease;}
+  .pack-row.on{background:rgba(31,68,255,.08);border-left-color:var(--accent);}
+  .pack-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink-faint);background:transparent;}
+  .pack-row.on .pack-dot{border-color:var(--accent);background:var(--accent);}
+  .pack-name{display:block;font-family:'Anton',sans-serif;font-size:clamp(17px,1.9vw,26px);text-transform:uppercase;line-height:1.08;}
+  .pack-code{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.5;margin-top:5px;}
+  .pack-price{font-weight:700;font-size:19px;}
+  .trust-row{display:flex;flex-wrap:wrap;gap:10px;padding:16px clamp(18px,4vw,30px);font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.5;}
+  .pack-summary{padding:28px clamp(18px,4vw,30px) 26px;display:flex;flex-direction:column;gap:18px;background:var(--ink);color:var(--paper);}
+  .ps-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.55;}
+  .ps-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(242,239,231,.14);}
+  .ps-total{display:flex;align-items:baseline;justify-content:space-between;padding-top:6px;}
+  .ps-total .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;}
+  .ps-total .val{font-family:'Anton',sans-serif;font-size:clamp(36px,4.4vw,54px);line-height:.9;color:var(--accent);}
+  .ps-cta{width:100%;background:var(--accent);color:var(--paper);border:none;padding:17px;cursor:none;font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;transition:background .2s;}
+  .ps-cta:hover{background:var(--paper);color:var(--ink);}
+  .ps-fine{font-size:9.5px;letter-spacing:.08em;opacity:.45;text-align:center;}
+
+  .horario{border-top:1px solid var(--ink);padding-bottom:clamp(70px,8vw,120px);}
+  .h-head{padding:0 clamp(18px,4vw,42px) 26px;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:18px;}
+  .pin-wrap{overflow-x:auto;overflow-y:hidden;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);cursor:grab;scrollbar-width:thin;-webkit-overflow-scrolling:touch;user-select:none;-webkit-user-select:none;}
+  .pin-wrap.dragging{cursor:grabbing;scroll-behavior:auto;}
+  /* width:100% + min-width:max-content: on a wide screen where all 4 cards already fit,
+     the row stretches to fill the section (cards grow with it via flex-grow below) instead
+     of leaving a dangling empty gap after the last card; once cards can't fit at their floor
+     width the min-width takes over and the row overflows into the existing drag-to-scroll */
+  .rail{display:flex;width:100%;min-width:max-content;will-change:transform;}
+  .day-col{width:340px;max-width:480px;flex:1 0 auto;border-right:1px solid var(--ink);padding:26px 26px 32px;transition:box-shadow .3s ease;will-change:transform;}
+  .day-col:hover{box-shadow:0 20px 40px -18px rgba(20,22,26,.4);}
+  .day-col-head{display:flex;align-items:center;gap:9px;margin-bottom:22px;}
+  .day-col-head .dd{width:9px;height:9px;border-radius:50%;}
+  .day-col-head .wk{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.6;}
+  .day-col-head .lb{font-family:'Anton',sans-serif;font-size:28px;text-transform:uppercase;margin-left:auto;}
+  .slot{padding:14px 0;border-top:1px solid var(--ink-faint);}
+  .slot .time{font-size:10.5px;letter-spacing:.1em;color:var(--accent);}
+  .slot .title{font-family:'Newsreader',serif;font-weight:500;font-size:19px;line-height:1.25;margin-top:5px;}
+  .slot .place{font-size:9px;letter-spacing:.12em;text-transform:uppercase;opacity:.55;margin-top:6px;}
+
+  .equipa{border-top:1px solid var(--ink);padding-bottom:clamp(70px,8vw,120px);}
+  .team-row{display:grid;grid-template-columns:56px 1fr auto;gap:20px;align-items:center;padding:16px clamp(18px,4vw,42px);border-bottom:1px solid var(--ink-faint);transition:background .3s,color .3s,padding-left .3s;}
+  .team-row:hover{background:var(--ink);color:var(--paper);padding-left:calc(clamp(18px,4vw,42px) + 16px);}
+  .team-idx{font-size:10px;opacity:.45;}
+  .team-name{font-family:'Anton',sans-serif;font-size:clamp(22px,3vw,42px);text-transform:uppercase;line-height:1;}
+  .team-role{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.55;}
+
+  .faqs{border-top:1px solid var(--ink);padding:clamp(56px,7vw,96px) clamp(18px,4vw,42px) clamp(70px,8vw,120px);display:grid;grid-template-columns:260px 1fr;gap:40px;}
+  .faq-item{border-bottom:1px solid var(--ink-faint);}
+  .faq-q{width:100%;text-align:left;background:none;border:none;padding:22px 0;cursor:none;display:flex;align-items:center;gap:20px;font-family:'Newsreader',serif;font-size:clamp(18px,2vw,26px);line-height:1.2;color:var(--ink);}
+  .faq-q:hover{color:var(--accent);}
+  .faq-q .plus{font-family:'Space Mono',monospace;font-size:18px;color:var(--accent);display:inline-block;transition:transform .35s cubic-bezier(.2,.8,.25,1);}
+  .faq-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.2,.8,.25,1);}
+  .faq-body>div{overflow:hidden;}
+  .faq-body p{font-size:17px;line-height:1.6;opacity:0;margin:0;padding:0 40px 24px 0;max-width:640px;transform:translateY(-8px);transition:opacity .35s ease .05s,transform .35s ease .05s;}
+  .faq-item.open .faq-body{grid-template-rows:1fr;}
+  .faq-item.open .faq-body p{opacity:.68;transform:translateY(0);}
+  .faq-item.open .plus{transform:rotate(135deg);}
+  .faq-item.open .faq-q{color:var(--accent);}
+  .faq-q{transition:color .2s ease,padding-left .3s ease;}
+  .faq-q:hover{padding-left:8px;}
+
+  .local-banner{grid-column:1/-1;position:relative;width:100%;height:clamp(300px,42vw,560px);overflow:hidden;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);}
+  .local-banner img{width:100%;height:100%;object-fit:cover;filter:saturate(1.08) contrast(1.05);display:block;}
+  .local-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,22,26,.28),transparent 26%,transparent 68%,rgba(20,22,26,.36));pointer-events:none;}
+  .local-banner .credit{position:absolute;right:clamp(14px,3vw,28px);bottom:14px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);background:rgba(242,239,231,.85);padding:3px 9px;border-radius:2px;z-index:2;}
+  .local-banner .credit a{color:inherit;}
+  .local-banner .cap{position:absolute;left:clamp(18px,4vw,42px);bottom:14px;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);background:rgba(242,239,231,.85);padding:3px 9px;border-radius:2px;z-index:2;}
+  .local{display:grid;grid-template-columns:1fr 1.05fr;}
+  .local-l{padding:clamp(56px,7vw,96px) clamp(18px,4vw,42px);}
+  .local-body{font-size:18px;line-height:1.55;opacity:.7;margin:0 0 28px;max-width:30em;}
+  .local-addr{font-size:11px;line-height:2.1;letter-spacing:.06em;border-top:1px solid var(--ink);padding-top:16px;}
+  .local-addr .coord{color:var(--accent);}
+  .local-r{position:relative;min-height:360px;background:var(--ink);color:var(--paper);overflow:hidden;}
+  .local-r img.map-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.92);}
+  .local-r .fig{position:absolute;top:16px;left:16px;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);background:rgba(242,239,231,.88);padding:3px 9px;border-radius:2px;z-index:2;}
+  .local-r .coordlabel{position:absolute;bottom:16px;right:16px;font-size:9.5px;letter-spacing:.12em;color:var(--ink);background:rgba(242,239,231,.88);padding:3px 9px;border-radius:2px;z-index:2;}
+  .local-r .map-credit{position:absolute;bottom:16px;left:16px;font-size:8.5px;letter-spacing:.08em;color:var(--ink);background:rgba(242,239,231,.88);padding:3px 9px;border-radius:2px;z-index:2;}
+  .local-r .map-credit a{color:var(--ink);}
+
+  .apoios{padding:44px 0;border-top:1px solid var(--ink);overflow:hidden;}
+  .apoios-label{padding:0 clamp(18px,4vw,42px) 24px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.5;}
+  .apoios-track{display:flex;width:max-content;}
+  .apoios-track span{padding:0 30px;white-space:nowrap;flex:0 0 auto;font-family:'Anton',sans-serif;font-size:32px;text-transform:uppercase;line-height:1.3;opacity:.32;}
+
+  .finalcta{position:relative;background:var(--ink);color:var(--paper);padding:clamp(70px,9vw,120px) clamp(18px,4vw,42px) clamp(46px,5vw,64px);overflow:hidden;border-top:1px solid var(--ink);}
+  .finalcta .bgwrap{position:absolute;inset:0;overflow:hidden;}
+  .finalcta .bgwrap img{position:absolute;inset:-8%;width:116%;height:116%;object-fit:cover;filter:grayscale(.55) brightness(.42) contrast(1.1);}
+  .finalcta .bggrad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,22,26,.55) 0%,rgba(20,22,26,.92) 100%);}
+  .finalcta .content{position:relative;}
+  .final-title{font-size:clamp(46px,10vw,150px);line-height:.86;margin:0 0 30px;}
+  .final-row{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:26px;border-top:1px solid rgba(242,239,231,.35);padding-top:26px;}
+  .final-row p{font-size:19px;line-height:1.45;margin:0;max-width:32em;}
+  .final-cta-btn{background:var(--accent);color:var(--paper);border:none;padding:20px 46px;cursor:none;font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;transition:background .2s;}
+  .final-cta-btn:hover{background:var(--paper);color:var(--ink);}
+  .foot-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:26px;margin-top:clamp(50px,6vw,80px);padding-top:30px;border-top:1px solid rgba(242,239,231,.2);}
+  .foot-col .head{font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;margin-bottom:10px;}
+  .foot-col .lines{font-size:15.5px;line-height:1.6;opacity:.85;}
+  .day-stripe{display:flex;margin-top:clamp(30px,3.4vw,44px);}
+  .day-stripe span{flex:1;height:8px;}
+  .foot-bottom{display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px;margin-top:22px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.55;}
+
+  .modal-veil{position:fixed;inset:0;z-index:130;background:rgba(20,22,26,.86);backdrop-filter:blur(7px);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;}
+  .modal-veil.open{display:flex;}
+  .modal-box{width:100%;max-width:540px;margin:auto;background:var(--paper);color:var(--ink);border:1px solid var(--ink);}
+  .modal-top{display:flex;justify-content:space-between;align-items:center;background:var(--ink);color:var(--paper);padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;}
+  .modal-top button{background:none;border:none;cursor:none;color:var(--paper);font-size:17px;line-height:1;}
+  .modal-bar{height:3px;background:rgba(20,22,26,.14);}
+  .modal-bar i{display:block;height:100%;background:var(--accent);transition:width .4s cubic-bezier(.2,.8,.25,1);}
+  .modal-body{padding:30px 30px 28px;}
+  .modal-body h3{font-family:'Anton',sans-serif;font-size:32px;line-height:1;text-transform:uppercase;margin:0 0 24px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.5;margin-bottom:7px;}
+  .field input{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(20,22,26,.3);color:var(--ink);padding:9px 2px;font-family:'Newsreader',serif;font-size:19px;outline:none;}
+  .field input:focus{border-color:var(--accent);}
+  .modal-pack-row{width:100%;text-align:left;border:none;border-bottom:1px solid rgba(20,22,26,.2);padding:13px 8px;cursor:none;display:flex;gap:12px;align-items:center;font-family:'Newsreader',serif;font-size:16.5px;background:transparent;color:rgba(20,22,26,.68);transition:background .25s;}
+  .modal-pack-row.on{background:rgba(31,68,255,.14);color:var(--ink);}
+  .modal-summary{border:1px solid rgba(20,22,26,.28);padding:16px;font-size:11.5px;line-height:2.05;}
+  .modal-actions{display:flex;gap:9px;margin-top:28px;}
+  .btn-back{border:1px solid rgba(20,22,26,.3);background:none;color:var(--ink);padding:14px 22px;cursor:none;font-size:10px;letter-spacing:.16em;text-transform:uppercase;}
+  .btn-next{flex:1;background:var(--accent);color:var(--paper);border:none;padding:14px 22px;cursor:none;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;}
+  .btn-next:hover{background:var(--ink);}
+  [data-i18n],[data-i18n-html]{}
+
+  /* ============================================================
+     MOBILE — kept at the end of the stylesheet on purpose: CSS
+     resolves same-specificity rules by source order, and a media
+     query does not win a specificity fight, only a source-order
+     one once its condition is true. Placed early, these lose to
+     the plain desktop rules defined further down; placed last,
+     they correctly override them below the breakpoint.
+     ============================================================ */
+  /* the custom cursor is a mouse/trackpad affordance, not a viewport-width one — gate it on
+     actual pointer capability so narrowing a desktop window never kills it, and only real
+     touchscreens (which would otherwise freeze a ghost dot at the last tap) fall back to native */
+  @media (hover:none), (pointer:coarse){
+    body{cursor:auto;}
+    .no-mobile-cursor{display:none;}
+  }
+
+  @media (max-width:880px){
+    /* ---- nav: collapse the link row behind a hamburger toggle ---- */
+    .navToggle{display:flex;}
+    nav .links{display:none;width:100%;order:10;flex-direction:column;background:var(--paper);}
+    nav .links.open{display:flex;}
+    nav .links a{padding:16px clamp(18px,4vw,32px);border-right:none;border-bottom:1px solid var(--ink-faint);}
+    nav .cta{padding:0 16px;font-size:9.5px;}
+    /* .links (flex:1) is what pushes the right-side cluster to the edge on desktop;
+       it's display:none below this breakpoint, so without a replacement spacer the
+       logo + langbtn + cta + toggle just pack together at the left. */
+    nav .langbtn{padding:0 12px;margin-left:auto;}
+
+    /* ---- hero: one column, photo card flows below the text, date chips share rows ---- */
+    .hero-grid{grid-template-columns:1fr;gap:30px;padding:0 clamp(18px,4vw,32px);}
+    .scope-stack{max-width:440px;margin:0 auto;}
+    /* the "vemo-nos em lisboa" aside was absolutely positioned to sit beside the desktop
+       wordmark's spare width — on a narrow column there is no spare width, so it landed
+       directly on top of "2027". Flow it as its own line below instead. */
+    .wm-aside{position:static;display:block;width:max-content;margin:10px 0 0;transform:rotate(-2deg);}
+    .wordmark{margin-bottom:14px;}
+    .daychips .chip{flex:1 1 64px;min-width:64px;}
+
+    /* ---- activities rows: stack index / title+tag / body / photo ---- */
+    .act-head{grid-template-columns:1fr;gap:8px;margin-bottom:40px;}
+    .act-inner{grid-template-columns:1fr;gap:12px;}
+    .act-photo{height:170px;}
+
+    /* ---- packs: pack list and the sticky summary sidebar stack full-width ---- */
+    .packs-grid{grid-template-columns:1fr;}
+
+    /* ---- schedule rail: slightly narrower cards so the next day peeks further in ---- */
+    .day-col{width:82vw;}
+
+    /* ---- team rows: give the role column room instead of crowding the name ---- */
+    .team-row{grid-template-columns:32px 1fr;row-gap:4px;column-gap:14px;}
+    .team-row .team-role{grid-column:2;font-size:9.5px;}
+
+    /* ---- faq: heading above the list instead of a fixed 260px rail ---- */
+    .faqs{grid-template-columns:1fr;gap:20px;}
+    .faqs .sec-title{position:static;}
+
+    /* ---- venue/map: stack text above the map ---- */
+    .local{grid-template-columns:1fr;}
+
+
+    /* ---- porthole "ship windows": the desktop sizes don't leave room for three
+       across on a phone-width screen, so they overlap — shrink them here. ---- */
+    .porthole-band{padding:0 4vw;gap:2vw;}
+    .porthole-frame.ph1{width:76px;height:76px;}
+    .porthole-frame.ph2{width:104px;height:104px;}
+    .porthole-frame.ph3{width:70px;height:70px;}
+
+    /* ---- footer: single column, tidier stacking ---- */
+    .foot-cols{grid-template-columns:1fr;gap:30px;}
+  }
+
+  @media (max-width:480px){
+    .wordmark .row{font-size:clamp(48px,15vw,64px);}
+    .daychips .chip{flex-basis:calc(50% - 5px);}
+    .day-col{width:88vw;}
+  }
+</style>
+</head>
+<body>
+
+  <div id="introVeil" aria-hidden="true">
+    <div class="intro-blob" id="introBlob"></div>
+    <div class="intro-ring" id="introRing">
+      <svg viewBox="0 0 120 120" width="60" height="60"><circle cx="60" cy="60" r="56" fill="none" stroke="#F2EFE7" stroke-width="1.5"></circle><text x="60" y="70" text-anchor="middle" fill="#F2EFE7" font-family="Anton, sans-serif" font-size="30">27</text></svg>
+    </div>
+    <div class="intro-word" id="introWord">ENEF · Lisboa</div>
+  </div>
+  <script>
+    // hard failsafe, independent of GSAP/motion script below: whatever else happens,
+    // the intro veil never permanently blocks the page.
+    document.body.style.overflow = "hidden";
+    window.__introFailsafe = setTimeout(function(){
+      var v = document.getElementById("introVeil");
+      if (v && v.parentNode){ v.style.transition = "opacity .35s ease"; v.style.opacity = "0"; setTimeout(function(){ if (v.parentNode) v.parentNode.removeChild(v); }, 380); }
+      document.body.style.overflow = "";
+    }, 4800);
+  </script>
+
+  <div class="cursor-ring no-mobile-cursor" id="cursorRing"><i></i></div>
+  <div class="cursor-dot no-mobile-cursor" id="cursorDot"><i></i></div>
+  <div class="cursor-label no-mobile-cursor" id="cursorLabel"><span id="cursorLabelText"></span></div>
+  <div class="grain-overlay" aria-hidden="true"></div>
+
+  <nav>
+    <a href="#top" class="logo">ENEF<b>27</b></a>
+    <div class="links">
+      <a href="#atividades" class="navhover" data-i18n="navProg">Programa</a>
+      <a href="#packs" class="navhover" data-i18n="navPacks">Packs</a>
+      <a href="#horario" class="navhover" data-i18n="navSched">Horário</a>
+      <a href="#equipa" class="navhover" data-i18n="navTeam">Equipa</a>
+      <a href="#faqs" class="navhover" data-i18n="navFaqs">FAQ</a>
+      <a href="https://claude.ai/code/artifact/bf1601e9-ee9f-476d-841f-82055529d8f2" class="navhover" data-i18n="navContact">Contactos</a>
+    </div>
+    <button class="langbtn" id="langBtn"><span id="langPt" style="color:var(--accent)">PT</span><span style="opacity:.35">/</span><span id="langEn">EN</span></button>
+    <button class="cta" id="ctaNav" data-i18n="cta">Inscrever</button>
+    <button class="navToggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <div class="prog-track"><div class="prog-bar" id="progBar"></div></div>
+  </nav>
+
+  <section id="top" class="hero">
+    <div class="hero-blobs" aria-hidden="true">
+      <svg class="hb hb1" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"><path d="M199,326Q158,392,84,362Q10,332,22,246Q34,160,108,126Q182,92,256,132Q330,172,322,252Q314,332,199,326Z" fill="#E7E2D3"></path></svg>
+      <svg class="hb hb2" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"><path d="M204,332Q160,384,96,346Q32,308,44,232Q56,156,124,120Q192,84,258,124Q324,164,312,244Q300,324,204,332Z" fill="rgba(31,68,255,.08)"></path></svg>
+    </div>
+    <div class="hero-grid">
+      <div>
+        <div class="kicker mono"><span class="dot"></span><span data-i18n="kicker">Encontro Nacional de Estudantes de Física</span></div>
+        <div class="wordmark" id="heroWordmark">
+          <div class="row display"><span>E</span><span>N</span><span>E</span><span>F</span></div>
+          <div class="row blue display"><span>2</span><span>0</span><span>2</span><span>7</span></div>
+          <div class="wm-aside hand" data-i18n="aside">vemo-nos em lisboa</div>
+        </div>
+        <p class="hero-lead" data-i18n="heroLead">A 26ª edição do ENEF acontece em Lisboa, no Instituto Superior Técnico.</p>
+        <div class="daychips" id="dayChips"></div>
+        <div class="venuerow mono">
+          <span>Instituto Superior Técnico</span><span class="sep">/</span><span>Lisboa</span><span class="sep">/</span><span>11—14.02.2027</span>
+        </div>
+      </div>
+      <div class="scope-stack" id="scopeStack">
+      <div class="scope-backer" aria-hidden="true"></div>
+      <div class="scope" id="scopePanel">
+        <div class="scope-top mono">
+          <span>Fig. 01 — Lisboa / IST</span>
+          <span class="rec"><i></i><span data-i18n="rec">Ao vivo</span></span>
+        </div>
+        <div class="scope-photo">
+          <img src="assets/photo1.jpg" alt="Lisboa ao entardecer">
+          <div class="grad"></div>
+        </div>
+        <div class="scope-mid mono"><span data-i18n="until">até ao evento</span><span>SI</span></div>
+        <div class="cd-grid mono" id="countdownGrid"></div>
+        <div class="seal">
+          <svg viewBox="0 0 120 120" width="78" height="78" xmlns="http://www.w3.org/2000/svg">
+            <defs><path id="stampPath" d="M60,60 m-43,0 a43,43 0 1,1 86,0 a43,43 0 1,1 -86,0" fill="none"></path></defs>
+            <circle cx="60" cy="60" r="56" fill="#1F44FF"></circle>
+            <text fill="#F2EFE7" font-family="'Space Mono', monospace" font-size="10" font-weight="700" letter-spacing="2.4">
+              <textPath href="#stampPath" startOffset="0">11—14 FEV · LISBOA · IST · 11—14 FEV · LISBOA · IST · </textPath>
+            </text>
+            <text x="60" y="67" text-anchor="middle" fill="#F2EFE7" font-family="Anton, sans-serif" font-size="22">26ª</text>
+          </svg>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- the wave lives with the black section (not the pinning hero) so it always
+       stays glued flush to the ticker band as its top edge, riding up with it as
+       one piece rather than sitting stranded near the pinned hero while the
+       ticker still has to catch up from below. -->
+  <svg class="wave" viewBox="0 0 1200 60" preserveAspectRatio="none">
+    <path d="M0,30 C 150,0 300,60 450,30 C 600,0 750,60 900,30 C 1000,10 1100,45 1200,30 L1200,60 L0,60 Z" fill="#14161A"></path>
+  </svg>
+  <div class="ticker-outer">
+    <div class="ticker-wrap" id="tickerWrap">
+      <div class="ticker-track mono display" id="tickerTrack"></div>
+    </div>
+  </div>
+
+  <div class="porthole-band" id="portholeBand" aria-hidden="true">
+    <div class="porthole-frame ph1"><div class="porthole-hole"><img id="phLab" alt=""></div></div>
+    <div class="porthole-frame ph2"><div class="porthole-hole"><img id="phBlue" alt=""></div></div>
+    <div class="porthole-frame ph3"><div class="porthole-hole"><img id="phCampus" alt=""></div></div>
+    <div class="porthole-cap mono">Um relance por trás</div>
+  </div>
+
+  <section id="atividades" class="activities">
+    <div class="act-head">
+      <h2 class="sec-title display" data-reveal data-i18n="actTitle">Ciência de dia, Lisboa de noite.</h2>
+      <p class="sec-sub" data-reveal data-i18n="actSub">Três frentes de programa.</p>
+    </div>
+    <div id="activitiesList"></div>
+    <div class="stats-row mono" id="statsRow"></div>
+  </section>
+
+  <section id="packs" class="packs">
+    <div class="sec-head">
+      <div class="sec-kicker mono" data-reveal data-i18n="navPacksNum">Packs</div>
+      <h2 class="sec-title display" data-reveal data-i18n="packTitle">Cinco packs.</h2>
+      <p class="sec-sub" data-reveal data-i18n="packSub">Do bilhete só para a ciência ao pack completo.</p>
+    </div>
+    <div class="packs-grid">
+      <div class="pack-list" id="packList"></div>
+      <div class="pack-summary">
+        <div class="ps-label mono" data-i18n="summaryLabel">Resumo da inscrição</div>
+        <div id="psItems"></div>
+        <div class="ps-total"><span class="lbl mono" data-i18n="totalLabel">Total</span><span class="val display" id="psTotal"></span></div>
+        <button class="ps-cta mono" id="ctaPack"><span data-i18n="ctaPack">Inscrever com este pack</span> →</button>
+        <div class="ps-fine mono" data-i18n="trust3">Pagamento confirmado por email em 48h</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="horario" class="horario">
+    <div class="h-head">
+      <div>
+        <div class="sec-kicker mono" data-reveal data-i18n="navSchedNum">Horário</div>
+        <h2 class="sec-title display" data-reveal data-i18n="schedTitle">Quatro dias, um horário.</h2>
+      </div>
+      <span class="mono" style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.5" data-i18n="dragHint">Arrasta para o lado →</span>
+    </div>
+    <div class="pin-wrap" id="railWrap">
+      <div class="rail" id="railTrack"></div>
+    </div>
+  </section>
+
+  <section id="equipa" class="equipa">
+    <div class="sec-head" style="padding-bottom:0">
+      <div class="sec-kicker mono" data-reveal data-i18n="navTeamNum">Equipa</div>
+      <h2 class="sec-title display" data-reveal data-i18n="teamTitle">Quem organiza.</h2>
+    </div>
+    <div style="border-top:1px solid var(--ink);margin-top:40px" id="teamList"></div>
+  </section>
+
+  <section id="faqs" class="faqs">
+    <div>
+      <div class="sec-kicker mono" data-reveal data-i18n="navFaqsNum">FAQ</div>
+      <h2 class="sec-title display" style="font-size:clamp(30px,3.4vw,50px);position:sticky;top:110px" data-reveal data-i18n="faqTitle">Perguntas frequentes.</h2>
+    </div>
+    <div style="border-top:1px solid var(--ink)" id="faqList"></div>
+  </section>
+
+  <section id="local" class="local">
+    <div class="local-banner" id="localBanner">
+      <img id="istFrontImg" src="assets/photo2.jpg" alt="Fachada principal do Instituto Superior Técnico">
+      <div class="cap mono" data-i18n="placeCap">Pavilhão Central · Alameda</div>
+      <div class="credit mono">Foto: <a href="https://tecnico.ulisboa.pt/pt/sobre-o-tecnico/campi/alameda/" target="_blank" rel="noopener">Técnico ULisboa</a></div>
+    </div>
+    <div class="local-l">
+      <div class="sec-kicker mono" data-reveal data-i18n="navPlaceNum">Local</div>
+      <h2 class="display" style="font-size:clamp(28px,4vw,54px);line-height:.96;margin:0 0 22px" data-reveal>Instituto Superior Técnico</h2>
+      <p class="local-body" data-i18n="placeBody">Todas as sessões científicas decorrem no Departamento de Física do Técnico.</p>
+      <div class="local-addr mono">
+        <div>Av. Rovisco Pais 1, 1049-001 Lisboa</div>
+        <div data-i18n="placeDept">Departamento de Física · Campus Alameda</div>
+        <div class="coord">38.7367° N — 9.1395° W</div>
+      </div>
+    </div>
+    <div class="local-r">
+      <img class="map-img" alt="Mapa: Instituto Superior Técnico, Alameda, Lisboa" src="assets/photo3.jpg">
+      <div class="fig mono" data-i18n="navPlace">Local</div>
+      <div class="coordlabel mono">38.7367,-9.1395</div>
+      <div class="map-credit mono">&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>
+    </div>
+  </section>
+
+  <section class="apoios">
+    <div class="apoios-label mono" data-reveal data-i18n="sponsorsLabel">Apoios e patrocínios</div>
+    <div style="width:100%;overflow:hidden"><div class="apoios-track" id="apoiosTrack"></div></div>
+  </section>
+
+  <section class="finalcta">
+    <div class="bgwrap"><img src="assets/photo4.jpg" alt=""><div class="bggrad"></div></div>
+    <div class="content">
+      <h2 class="final-title display" data-reveal data-i18n="finalTitle">Vemo-nos em Lisboa.</h2>
+      <div class="final-row">
+        <p data-i18n="finalSub">Inscrições da 1ª fase abertas até 30 de novembro de 2026.</p>
+        <button class="final-cta-btn mono" id="ctaFinal"><span data-i18n="ctaLong">Inscreve-te →</span></button>
+      </div>
+      <div class="foot-cols" id="footCols"></div>
+      <div class="day-stripe" id="dayStripe"></div>
+      <div class="foot-bottom mono">
+        <span>ENEF 2027 · Lisboa</span>
+        <span>Physis · Núcleo de Física</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal-veil" id="regModal">
+    <div class="modal-box">
+      <div class="modal-top mono"><span id="regStepLabel"></span><button id="regClose">×</button></div>
+      <div class="modal-bar"><i id="regProgress" style="width:0%"></i></div>
+      <div class="modal-body">
+        <h3 id="regTitle"></h3>
+        <div id="regStep0">
+          <div class="field"><label id="regL0"></label><input id="regF0"></div>
+          <div class="field"><label id="regL1"></label><input id="regF1"></div>
+          <div class="field"><label id="regL2"></label><input id="regF2"></div>
+        </div>
+        <div id="regStep1" style="border-top:1px solid rgba(20,22,26,.2);display:none"></div>
+        <div id="regStep2" style="display:none">
+          <p id="regDoneBody" style="font-size:17px;line-height:1.6;opacity:.7;margin:0 0 20px"></p>
+          <div class="modal-summary mono">
+            <div id="sumName"></div>
+            <div id="sumEmail"></div>
+            <div id="sumPack" style="color:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-back mono" id="regBack" style="display:none"></button>
+          <button class="btn-next mono" id="regNext"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script><script>
+(function(){
+  "use strict";
+  // shared motion signature: the one eased curve already used for this site's mechanical
+  // reveals (faq accordion, modal progress bar, activity flood) — reused here for scroll-
+  // triggered entrances too, so every "this appears now" moment reads as one motion language
+  // instead of a handful of similar-but-different easings.
+  var EASE = "cubic-bezier(.2,.8,.25,1)";
+  var SPECTRUM = [
+    { color:"#C4362F", fg:"#F2EFE7" },
+    { color:"#E8A93C", fg:"#14161A" },
+    { color:"#2C93A8", fg:"#F2EFE7" },
+    { color:"#4B3FA6", fg:"#F2EFE7" }
+  ];
+  var NAMES = ["Marta Nunes","Rui Carvalho","Inês Batista","Tomás Ferreira","Beatriz Lopes","Diogo Sousa","Carolina Melo","André Pinto"];
+  var LAB_IMG = "assets/photo5.jpg";
+  var BLUE_IMG = "assets/photo6.jpg";
+  var CAMPUS_IMG = "assets/photo7.jpg";
+
+  var COPY = {
+    pt: {
+      navProg:"Programa", navPacks:"Packs", navSched:"Horário", navTeam:"Equipa", navFaqs:"FAQ", navPlace:"Local", navContact:"Contactos",
+      navPacksNum:"Packs", navSchedNum:"Horário", navTeamNum:"Equipa", navFaqsNum:"FAQ", navPlaceNum:"Local", navContactNum:"Contactos",
+      cta:"Inscrever", ctaLong:"Inscreve-te →", ctaPack:"Inscrever com este pack", hoverNav:"Ver secção", hoverCta:"Abrir inscrição", back:"Voltar",
+      kicker:"Encontro Nacional de Estudantes de Física",
+      ticker:["ENEF 2027","Lisboa","11—14 fevereiro","Inscrições abertas","26ª edição","Técnico"],
+      aside:"vemo-nos em lisboa",
+      heroLead:"A 26ª edição do ENEF acontece em Lisboa, no Instituto Superior Técnico. Quatro dias de física, cidade e gente nova.",
+      rec:"Ao vivo", until:"até ao evento",
+      actTitle:"Ciência de dia,\nLisboa de noite.",
+      actSub:"Três frentes de programa, quatro dias, uma cidade que não fecha cedo.",
+      activities:[
+        {title:"Científicas", body:"Palestras de investigadores, workshops práticos e visitas aos laboratórios do Técnico.", tag:"Palestras · Workshops · Labs", img:LAB_IMG},
+        {title:"Recreativas", body:"Jantares, noites lisboetas e roteiros pela cidade. O ENEF também se faz fora das salas.", tag:"Noites · Roteiros · Jantares", img:BLUE_IMG},
+        {title:"Concursos", body:"Poster Competition e Student Lectures. Apresenta o teu trabalho e habilita-te a prémios.", tag:"Posters · Student Lectures", img:CAMPUS_IMG}
+      ],
+      stats:[["26ª","Edição"],["40+","Palestras e workshops"],["300","Participantes"]],
+      packTitle:"Cinco packs.", packSub:"Do bilhete só para a ciência ao pack completo com alojamento. Preços da 1ª fase.",
+      packs:[
+        {code:"P1", name:"Científicas", price:"35€", includes:[0]},
+        {code:"P2", name:"Científicas + refeições", price:"60€", includes:[0,1]},
+        {code:"P3", name:"Científicas + recreativas", price:"65€", includes:[0,2]},
+        {code:"P4", name:"Científicas + recreativas + refeições", price:"90€", includes:[0,1,2]},
+        {code:"P5", name:"Tudo + alojamento", price:"120€", includes:[0,1,2,3]}
+      ],
+      incl:["Atividades científicas","Refeições","Atividades recreativas","Alojamento"],
+      summaryLabel:"Resumo da inscrição", totalLabel:"Total",
+      trust1:"Sem taxas escondidas", trust2:"Cancela até 30 dias antes", trust3:"Pagamento confirmado por email em 48h",
+      schedTitle:"Quatro dias,\num horário.", dragHint:"Arrasta para o lado →",
+      dayLabels:["11","12","13","14"], dayWeek:["QUI","SEX","SÁB","DOM"],
+      schedule:[
+        [["14:00","Check-in e credenciação","Pavilhão de Física"],["17:00","Sessão de abertura","Anfiteatro Abreu Faro"],["18:30","Palestra de abertura","Anfiteatro Abreu Faro"],["21:30","Jantar de boas-vindas","Alameda"],["23:30","Noite de abertura","Bairro Alto"]],
+        [["09:30","Palestras plenárias","Anfiteatro Abreu Faro"],["11:30","Workshops paralelos","Departamento de Física"],["14:30","Visitas a laboratórios","Campus Alameda"],["17:00","Poster Competition","Átrio do Complexo"],["22:00","Noite temática","Cais do Sodré"]],
+        [["09:30","Student Lectures","Anfiteatro Abreu Faro"],["11:30","Painel com empresas","Sala de Congressos"],["15:00","Roteiro por Lisboa","Baixa e Belém"],["20:00","Jantar de gala","Lisboa"],["23:30","Festa ENEF","Lisboa"]],
+        [["10:00","Assembleia Physis","Departamento de Física"],["12:00","Entrega de prémios","Anfiteatro Abreu Faro"],["13:00","Sessão de encerramento","Anfiteatro Abreu Faro"],["14:30","Almoço de despedida","Alameda"]]
+      ],
+      teamTitle:"Quem organiza.",
+      roles:["Coordenação","Logística","Científico","Comunicação","Parcerias","Recreativo","Financeiro","Design"],
+      faqTitle:"Perguntas frequentes.",
+      faqs:[
+        ["Quem se pode inscrever?","O ENEF é aberto a estudantes de física e áreas afins de qualquer instituição de ensino superior, do 1º ano ao doutoramento."],
+        ["O alojamento está incluído?","Só no pack completo. Nos restantes packs a organização partilha uma lista de alojamentos com desconto perto do campus."],
+        ["Posso mudar de pack depois de me inscrever?","Sim, até 30 dias antes do evento, mediante disponibilidade e pagamento da diferença."],
+        ["Há apoio a deslocações?","Estamos a negociar tarifas de grupo com operadores ferroviários. Serão anunciadas por email a quem estiver inscrito."],
+        ["Como submeto um poster ou uma student lecture?","A submissão abre em novembro de 2026 através do formulário de inscrição. Podes indicar interesse já na inscrição."]
+      ],
+      placeBody:"Todas as sessões científicas decorrem no Departamento de Física do Técnico, no campus da Alameda. Metro à porta, cidade a dez minutos.",
+      placeDept:"Departamento de Física · Campus Alameda",
+      placeCap:"Pavilhão Central · Alameda",
+      sponsorsLabel:"Apoios e patrocínios",
+      finalTitle:"Vemo-nos em Lisboa.",
+      finalSub:"O maior encontro de estudantes de física em Portugal. Inscrições da 1ª fase abertas até 30 de novembro de 2026.",
+      footCols:[
+        ["Onde",["Instituto Superior Técnico","Departamento de Física, Campus Alameda","Av. Rovisco Pais 1, 1049-001 Lisboa"]],
+        ["Quando",["11 a 14 de fevereiro de 2027","Quatro dias, uma cidade"]],
+        ["Quem organiza",["Physis — Núcleo de Física","Ver equipa completa acima"]]
+      ],
+      reg:{
+        steps:["Dados","Pack","Confirmação"], t1:"Quem és tu?", t2:"Escolhe o teu pack", t3:"Inscrição registada.",
+        fields:[["Nome completo","Ex: Ana Silva"],["Email","Ex: ana@exemplo.pt"],["Instituição","Ex: Instituto Superior Técnico"]],
+        next:"Continuar", finish:"Confirmar inscrição", close:"Fechar",
+        doneBody:"Recebemos a tua inscrição. Vais receber um email com os dados de pagamento nas próximas 48 horas."
+      }
+    },
+    en: {
+      navProg:"Programme", navPacks:"Packs", navSched:"Schedule", navTeam:"Team", navFaqs:"FAQ", navPlace:"Venue", navContact:"Contact",
+      navPacksNum:"Packs", navSchedNum:"Schedule", navTeamNum:"Team", navFaqsNum:"FAQ", navPlaceNum:"Venue", navContactNum:"Contact",
+      cta:"Register", ctaLong:"Register now →", ctaPack:"Register with this package", hoverNav:"See section", hoverCta:"Open registration", back:"Back",
+      kicker:"National Meeting of Physics Students",
+      ticker:["ENEF 2027","Lisbon","11—14 February","Registration open","26th edition","Técnico"],
+      aside:"see you in lisbon",
+      heroLead:"The 26th edition of ENEF takes place in Lisbon, at Instituto Superior Técnico. Four days of physics, city and new people.",
+      rec:"Live", until:"to the event",
+      actTitle:"Science by day,\nLisbon by night.",
+      actSub:"Three programme strands, four days, a city that does not close early.",
+      activities:[
+        {title:"Scientific", body:"Talks by researchers, hands-on workshops and visits to Técnico laboratories.", tag:"Talks · Workshops · Labs", img:LAB_IMG},
+        {title:"Social", body:"Dinners, Lisbon nights and city routes. ENEF happens outside the lecture halls too.", tag:"Nights · Routes · Dinners", img:BLUE_IMG},
+        {title:"Competitions", body:"Poster Competition and Student Lectures. Present your work and compete for prizes.", tag:"Posters · Student Lectures", img:CAMPUS_IMG}
+      ],
+      stats:[["26th","Edition"],["40+","Talks and workshops"],["300","Participants"]],
+      packTitle:"Five packages.", packSub:"From the science-only ticket to the full package with accommodation. First-phase prices.",
+      packs:[
+        {code:"P1", name:"Scientific", price:"€35", includes:[0]},
+        {code:"P2", name:"Scientific + meals", price:"€60", includes:[0,1]},
+        {code:"P3", name:"Scientific + social", price:"€65", includes:[0,2]},
+        {code:"P4", name:"Scientific + social + meals", price:"€90", includes:[0,1,2]},
+        {code:"P5", name:"Everything + accommodation", price:"€120", includes:[0,1,2,3]}
+      ],
+      incl:["Scientific activities","Meals","Social activities","Accommodation"],
+      summaryLabel:"Registration summary", totalLabel:"Total",
+      trust1:"No hidden fees", trust2:"Cancel up to 30 days before", trust3:"Payment confirmed by email within 48h",
+      schedTitle:"Four days,\none schedule.", dragHint:"Drag sideways →",
+      dayLabels:["11","12","13","14"], dayWeek:["THU","FRI","SAT","SUN"],
+      schedule:[
+        [["14:00","Check-in and badges","Physics Building"],["17:00","Opening session","Abreu Faro Hall"],["18:30","Opening lecture","Abreu Faro Hall"],["21:30","Welcome dinner","Alameda"],["23:30","Opening night","Bairro Alto"]],
+        [["09:30","Plenary lectures","Abreu Faro Hall"],["11:30","Parallel workshops","Physics Department"],["14:30","Laboratory visits","Alameda Campus"],["17:00","Poster Competition","Main Atrium"],["22:00","Themed night","Cais do Sodré"]],
+        [["09:30","Student Lectures","Abreu Faro Hall"],["11:30","Industry panel","Congress Hall"],["15:00","Lisbon city route","Baixa and Belém"],["20:00","Gala dinner","Lisbon"],["23:30","ENEF party","Lisbon"]],
+        [["10:00","Physis assembly","Physics Department"],["12:00","Awards ceremony","Abreu Faro Hall"],["13:00","Closing session","Abreu Faro Hall"],["14:30","Farewell lunch","Alameda"]]
+      ],
+      teamTitle:"Who organises it.",
+      roles:["Coordination","Logistics","Scientific","Communication","Partnerships","Social","Finance","Design"],
+      faqTitle:"Frequently asked.",
+      faqs:[
+        ["Who can register?","ENEF is open to physics and related students from any higher education institution, from first year to PhD."],
+        ["Is accommodation included?","Only in the full package. For the other packages we share a list of discounted places near campus."],
+        ["Can I change package after registering?","Yes, up to 30 days before the event, subject to availability and payment of the difference."],
+        ["Is there travel support?","We are negotiating group fares with rail operators. Registered participants will be notified by email."],
+        ["How do I submit a poster or student lecture?","Submissions open in November 2026 through the registration form. You can flag your interest when you register."]
+      ],
+      placeBody:"All scientific sessions take place at the Physics Department of Técnico, on the Alameda campus. Metro at the door, city ten minutes away.",
+      placeDept:"Physics Department · Alameda Campus",
+      placeCap:"Central Pavilion · Alameda",
+      sponsorsLabel:"Partners and sponsors",
+      finalTitle:"See you in Lisbon.",
+      finalSub:"Portugal's largest gathering of physics students. First-phase registration open until 30 November 2026.",
+      footCols:[
+        ["Where",["Instituto Superior Técnico","Physics Department, Alameda Campus","Av. Rovisco Pais 1, 1049-001 Lisbon"]],
+        ["When",["11 to 14 February 2027","Four days, one city"]],
+        ["Organised by",["Physis — Physics Student Society","See full team above"]]
+      ],
+      reg:{
+        steps:["Details","Package","Confirmation"], t1:"Who are you?", t2:"Choose your package", t3:"Registration received.",
+        fields:[["Full name","Ex: Ana Silva"],["Email","Ex: ana@example.com"],["Institution","Ex: Instituto Superior Técnico"]],
+        next:"Continue", finish:"Confirm registration", close:"Close",
+        doneBody:"We received your registration. You will get an email with payment details within 48 hours."
+      }
+    }
+  };
+
+  var lang = "pt";
+  var state = { pack:0, faq:-1, regOpen:false, regStep:0, form:{name:"",email:"",inst:""} };
+  var sponsorNames = ["Physis","Técnico","FCT","Gulbenkian","IPFN","SPF"];
+
+  function t(){ return COPY[lang]; }
+  function pad(n){ return String(n).padStart(2,"0"); }
+
+  function setLangUI(){
+    document.getElementById("langPt").style.color = lang==="pt" ? "var(--accent)" : "rgba(20,22,26,.42)";
+    document.getElementById("langEn").style.color = lang==="en" ? "var(--accent)" : "rgba(20,22,26,.42)";
+    document.documentElement.lang = lang;
+  }
+
+  function applyI18n(){
+    document.querySelectorAll("[data-i18n]").forEach(function(el){
+      var val = t()[el.getAttribute("data-i18n")];
+      if (typeof val !== "string") return;
+      el.innerHTML = val.split("\n").join("<br>");
+    });
+  }
+
+  function renderDayChips(){
+    var wk = t().dayWeek;
+    var html = SPECTRUM.map(function(sp,i){
+      return '<div class="chip" style="background:'+sp.color+';color:'+sp.fg+'"><div class="num display">'+(11+i)+'</div><div class="nm mono">'+wk[i]+'</div></div>';
+    }).join("");
+    document.getElementById("dayChips").innerHTML = html;
+  }
+
+  function renderDayStripe(){
+    document.getElementById("dayStripe").innerHTML = SPECTRUM.map(function(sp){ return '<span style="background:'+sp.color+'"></span>'; }).join("");
+  }
+
+  function renderTicker(){
+    var items = [];
+    for (var r=0;r<5;r++){ items = items.concat(t().ticker); }
+    document.getElementById("tickerTrack").innerHTML = items.map(function(x,i){
+      var c = (i%3===1) ? "#1F44FF" : "#F2EFE7";
+      return '<span style="color:'+c+'">'+x+'</span>';
+    }).join("");
+    document.getElementById("apoiosTrack").innerHTML = [].concat(sponsorNames,sponsorNames,sponsorNames,sponsorNames).map(function(n){return '<span>'+n+'</span>';}).join("");
+  }
+
+  function renderActivities(){
+    var tilts = ["-1.4deg","1.2deg","-1deg"];
+    document.getElementById("activitiesList").innerHTML = '<div style="border-top:1px solid var(--paper-faint)">' + t().activities.map(function(a,i){
+      return '<div class="act-row" data-reveal>'+
+        '<div class="act-flood"></div>'+
+        '<div class="act-inner">'+
+          '<span class="act-num mono">0'+(i+1)+'</span>'+
+          '<div><h3 class="act-title display">'+a.title+'</h3><span class="act-tag mono">'+a.tag+'</span></div>'+
+          '<p class="act-body">'+a.body+'</p>'+
+          '<div class="act-photo" style="transform:rotate('+tilts[i]+')"><img src="'+a.img+'" alt=""></div>'+
+        '</div>'+
+      '</div>';
+    }).join("") + '</div>';
+    document.getElementById("statsRow").innerHTML = t().stats.map(function(s){
+      return '<span><b>'+s[0]+'</b> <span class="lbl">'+s[1]+'</span></span>';
+    }).join("");
+  }
+
+  // selecting a pack only toggles the "on" class on the existing rows (same reasoning as
+  // toggleFaq: a full re-render would recreate the nodes and skip the CSS transition on
+  // .pack-row.on). The summary sidebar's content genuinely changes per pack, so that part
+  // still rebuilds — but animates in with GSAP explicitly rather than relying on a CSS
+  // transition across a node swap.
+  function selectPack(i){
+    state.pack = i;
+    var rows = document.querySelectorAll("#packList .pack-row");
+    rows.forEach(function(btn, idx){ btn.classList.toggle("on", idx===i); });
+    if (window.gsap && rows[i]){
+      gsap.fromTo(rows[i], { scale:.985 }, { scale:1, duration:.4, ease:"back.out(2.4)", overwrite:true });
+    }
+    updatePackSummary();
+  }
+  function updatePackSummary(){
+    var ap = t().packs[state.pack];
+    var itemsEl = document.getElementById("psItems");
+    itemsEl.innerHTML = t().incl.map(function(label,i){
+      var on = ap.includes.indexOf(i) > -1;
+      return '<div class="ps-item" style="opacity:'+(on?"1":".4")+'"><span class="mono" style="color:'+(on?"var(--accent)":"rgba(242,239,231,.32)")+'">'+(on?"✓":"—")+'</span><span style="font-size:16.5px;flex:1">'+label+'</span></div>';
+    }).join("");
+    document.getElementById("psTotal").textContent = ap.price;
+    if (window.gsap){
+      gsap.from(itemsEl.children, { opacity:0, x:-10, duration:.4, stagger:.045, ease:EASE, overwrite:true });
+      gsap.fromTo("#psTotal", { scale:1.22 }, { scale:1, duration:.5, ease:"back.out(2.4)", overwrite:true });
+      gsap.fromTo(".ps-cta", { scale:.97 }, { scale:1, duration:.4, ease:EASE, overwrite:true });
+    }
+  }
+  function renderPacks(){
+    var packs = t().packs;
+    document.getElementById("packList").innerHTML = packs.map(function(p,i){
+      var on = i===state.pack;
+      return '<button class="pack-row'+(on?" on":"")+'" data-reveal data-i="'+i+'">'+
+        '<span class="pack-dot"></span>'+
+        '<span><span class="pack-name">'+p.name+'</span><span class="pack-code mono">'+p.code+' · '+p.includes.length+'/4</span></span>'+
+        '<span class="pack-price mono">'+p.price+'</span>'+
+      '</button>';
+    }).join("");
+    document.querySelectorAll(".pack-row").forEach(function(btn){
+      btn.addEventListener("click", function(){ selectPack(parseInt(btn.getAttribute("data-i"),10)); });
+    });
+    updatePackSummary();
+  }
+
+  function renderSchedule(){
+    var wk = t().dayWeek, labels = t().dayLabels, sched = t().schedule;
+    document.getElementById("railTrack").innerHTML = SPECTRUM.map(function(sp,i){
+      return '<div class="day-col">'+
+        '<div class="day-col-head"><span class="dd" style="background:'+sp.color+'"></span><span class="wk mono">'+wk[i]+'</span><span class="lb display">'+labels[i]+'</span></div>'+
+        sched[i].map(function(s){
+          return '<div class="slot"><div class="time mono">'+s[0]+'</div><div class="title">'+s[1]+'</div><div class="place mono">'+s[2]+'</div></div>';
+        }).join("")+
+      '</div>';
+    }).join("");
+  }
+
+  function renderTeam(){
+    var roles = t().roles;
+    document.getElementById("teamList").innerHTML = NAMES.map(function(name,i){
+      return '<div class="team-row"><span class="team-idx mono">'+pad(i+1)+'</span><span class="team-name display">'+name+'</span><span class="team-role mono">'+roles[i]+'</span></div>';
+    }).join("");
+    if (window.__rebuildTeamLadder) window.__rebuildTeamLadder();
+  }
+
+  // toggling only flips the "open" class on the existing nodes rather than re-rendering
+  // the list — a full innerHTML replace destroys and recreates the nodes, which silently
+  // skips the CSS grid-rows/plus-rotate transitions (no "previous state" to animate from)
+  // and made the accordion snap open instead of easing, dragging everything below it down
+  // in one jump. ScrollTrigger.refresh() afterwards recalculates trigger positions for
+  // anything scroll-scrubbed further down the page (e.g. the venue photo's parallax),
+  // which otherwise keeps using stale pixel offsets from before the layout shifted.
+  function toggleFaq(i){
+    state.faq = state.faq===i ? -1 : i;
+    document.querySelectorAll("#faqList .faq-item").forEach(function(el, idx){
+      el.classList.toggle("open", idx===state.faq);
+    });
+    if (window.ScrollTrigger){
+      setTimeout(function(){ ScrollTrigger.refresh(); }, 420);
+    }
+  }
+  function renderFaqs(){
+    document.getElementById("faqList").innerHTML = t().faqs.map(function(f,i){
+      var open = state.faq===i;
+      return '<div class="faq-item'+(open?" open":"")+'" data-reveal>'+
+        '<button class="faq-q" data-i="'+i+'"><span style="flex:1">'+f[0]+'</span><span class="plus">+</span></button>'+
+        '<div class="faq-body"><div><p>'+f[1]+'</p></div></div>'+
+      '</div>';
+    }).join("");
+    document.querySelectorAll(".faq-q").forEach(function(btn){
+      btn.addEventListener("click", function(){ toggleFaq(parseInt(btn.getAttribute("data-i"),10)); });
+    });
+  }
+
+  function renderFooter(){
+    document.getElementById("footCols").innerHTML = t().footCols.map(function(c){
+      return '<div class="foot-col"><div class="head mono">'+c[0]+'</div><div class="lines">'+c[1].map(function(l){return "<div>"+l+"</div>";}).join("")+'</div></div>';
+    }).join("");
+  }
+
+  function renderCountdown(){
+    var target = new Date("2027-02-11T14:00:00").getTime();
+    var diff = Math.max(0, target - Date.now());
+    var s = Math.floor(diff/1000);
+    var nums = [Math.floor(s/86400), Math.floor(s/3600)%24, Math.floor(s/60)%60, s%60];
+    var units = ["d","h","min","s"];
+    document.getElementById("countdownGrid").innerHTML = nums.map(function(n,i){
+      return '<div class="cd-cell"><div class="row"><span class="v">'+(i===0?n:pad(n))+'</span><span class="u">'+units[i]+'</span></div></div>';
+    }).join("");
+  }
+
+  // registration modal
+  function openReg(){ state.regOpen = true; state.regStep = 0; renderReg(); document.getElementById("regModal").classList.add("open"); }
+  function closeReg(){ state.regOpen = false; document.getElementById("regModal").classList.remove("open"); }
+  function renderReg(){
+    var r = t().reg, step = state.regStep, packs = t().packs, ap = packs[state.pack];
+    document.getElementById("regStepLabel").textContent = (step+1)+"/3 · "+r.steps[step];
+    document.getElementById("regProgress").style.width = ((step+1)/3*100)+"%";
+    document.getElementById("regTitle").textContent = [r.t1,r.t2,r.t3][step];
+    document.getElementById("regStep0").style.display = step===0 ? "" : "none";
+    document.getElementById("regStep1").style.display = step===1 ? "" : "none";
+    document.getElementById("regStep2").style.display = step===2 ? "" : "none";
+    if (step===0){
+      var labs = ["regL0","regL1","regL2"], flds = ["regF0","regF1","regF2"], keys=["name","email","inst"];
+      r.fields.forEach(function(fd,i){
+        document.getElementById(labs[i]).textContent = fd[0];
+        var input = document.getElementById(flds[i]);
+        input.placeholder = fd[1];
+        input.value = state.form[keys[i]];
+        input.oninput = function(){ state.form[keys[i]] = input.value; };
+      });
+    }
+    if (step===1){
+      document.getElementById("regStep1").innerHTML = packs.map(function(p,i){
+        var on = i===state.pack;
+        return '<button class="modal-pack-row'+(on?" on":"")+'" data-i="'+i+'"><span class="mono" style="font-size:10px;opacity:.6">'+p.code+'</span><span style="flex:1">'+p.name+'</span><span class="mono" style="font-weight:700;font-size:14px">'+p.price+'</span></button>';
+      }).join("");
+      document.querySelectorAll("#regStep1 .modal-pack-row").forEach(function(btn){
+        btn.addEventListener("click", function(){ state.pack = parseInt(btn.getAttribute("data-i"),10); renderPacks(); renderReg(); });
+      });
+    }
+    if (step===2){
+      document.getElementById("regDoneBody").textContent = r.doneBody;
+      document.getElementById("sumName").textContent = state.form.name || r.fields[0][1];
+      document.getElementById("sumEmail").textContent = state.form.email || r.fields[1][1];
+      document.getElementById("sumPack").textContent = ap.code+" · "+ap.name+" · "+ap.price;
+    }
+    var backBtn = document.getElementById("regBack");
+    backBtn.style.display = (step>0 && step<2) ? "" : "none";
+    backBtn.textContent = t().back;
+    var nextBtn = document.getElementById("regNext");
+    nextBtn.textContent = step===0 ? r.next : step===1 ? r.finish : r.close;
+  }
+  document.getElementById("regClose").addEventListener("click", closeReg);
+  document.getElementById("regBack").addEventListener("click", function(){ state.regStep = Math.max(0,state.regStep-1); renderReg(); });
+  document.getElementById("regNext").addEventListener("click", function(){
+    if (state.regStep < 2){ state.regStep++; renderReg(); } else { closeReg(); }
+  });
+  document.getElementById("ctaNav").addEventListener("click", openReg);
+  document.getElementById("ctaFinal").addEventListener("click", openReg);
+  document.getElementById("ctaPack").addEventListener("click", openReg);
+
+  document.getElementById("langBtn").addEventListener("click", function(){
+    lang = lang==="pt" ? "en" : "pt";
+    renderAll();
+  });
+
+  // mobile nav: the link row collapses behind this hamburger toggle below 880px
+  (function bindNavToggle(){
+    var toggle = document.getElementById("navToggle");
+    var links = document.querySelector("nav .links");
+    if (!toggle || !links) return;
+    function closeMenu(){
+      links.classList.remove("open");
+      toggle.classList.remove("active");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+    toggle.addEventListener("click", function(){
+      var open = links.classList.toggle("open");
+      toggle.classList.toggle("active", open);
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    links.querySelectorAll("a").forEach(function(a){
+      a.addEventListener("click", closeMenu);
+    });
+    window.addEventListener("resize", function(){
+      if (window.innerWidth > 880) closeMenu();
+    });
+  })();
+
+  // keep --nav-h in sync with the sticky nav's real height, so the smooth-scrolled
+  // anchor offset (scroll-margin-top, above) stays correct across the mobile/desktop
+  // nav heights and after a font-load reflow
+  (function trackNavHeight(){
+    var nav = document.querySelector("nav");
+    if (!nav) return;
+    function apply(){ document.documentElement.style.setProperty("--nav-h", (nav.offsetHeight+14)+"px"); }
+    apply();
+    window.addEventListener("resize", apply);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
+  })();
+
+  function renderAll(){
+    setLangUI(); applyI18n(); renderDayChips(); renderDayStripe(); renderTicker();
+    renderActivities(); renderPacks(); renderSchedule(); renderTeam(); renderFaqs(); renderFooter(); renderCountdown();
+    if (state.regOpen) renderReg();
+    if (window.__initReveal) window.__initReveal();
+  }
+
+  renderAll();
+  setInterval(renderCountdown, 1000);
+
+  // porthole band: glimpse of the same photography used elsewhere, through cut shapes
+  (function(){
+    var ph = document.getElementById("phLab");
+    var pb = document.getElementById("phBlue");
+    var pc = document.getElementById("phCampus");
+    if (ph) ph.src = LAB_IMG;
+    if (pb) pb.src = BLUE_IMG;
+    if (pc) pc.src = CAMPUS_IMG;
+  })();
+
+  // schedule rail: native horizontal scroll, enhanced with mouse drag-to-scroll
+  (function bindRailDrag(){
+    var wrap = document.getElementById("railWrap");
+    if (!wrap) return;
+    var isDown = false, startX = 0, startScroll = 0, moved = false;
+    wrap.addEventListener("pointerdown", function(e){
+      isDown = true; moved = false; startX = e.clientX; startScroll = wrap.scrollLeft;
+      wrap.classList.add("dragging");
+      e.preventDefault();
+    });
+    window.addEventListener("pointermove", function(e){
+      if (!isDown) return;
+      var dx = e.clientX - startX;
+      if (Math.abs(dx) > 4) moved = true;
+      wrap.scrollLeft = startScroll - dx;
+    });
+    window.addEventListener("pointerup", function(){
+      isDown = false; wrap.classList.remove("dragging");
+    });
+    wrap.addEventListener("click", function(e){ if (moved){ e.preventDefault(); e.stopPropagation(); } }, true);
+  })();
+
+  // ---- motion: Lenis + GSAP ScrollTrigger ----
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function safe(label, fn){
+    try { fn(); }
+    catch(e){ if (window.console) console.error("[enef:"+label+"]", e); }
+  }
+
+  if (!reduceMotion && window.gsap && window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+
+    // always show everything at rest first — motion only enhances from here
+    document.querySelectorAll("[data-reveal]").forEach(function(el){ el.style.opacity=1; });
+
+    // intro reveal: mark fades in, an accent blob scales up to swallow the screen,
+    // then recedes to hand off to the page — a designed transition, not a spinner.
+    safe("intro", function(){
+      var veil = document.getElementById("introVeil");
+      var blob = document.getElementById("introBlob");
+      var ring = document.getElementById("introRing");
+      var word = document.getElementById("introWord");
+      if (!veil || !blob || !ring || !word){ document.body.style.overflow=""; return; }
+      clearTimeout(window.__introFailsafe);
+      var reach = Math.max(window.innerWidth, window.innerHeight) * 1.7 / 64;
+      var tl = gsap.timeline({
+        onComplete: function(){
+          if (veil.parentNode) veil.parentNode.removeChild(veil);
+          document.body.style.overflow = "";
+        }
+      });
+      tl.set(blob, { scale: 0, borderRadius:"50%" });
+      tl.from([ring, word], { opacity:0, y:12, duration:.45, ease:"power2.out" })
+        .to(blob, { scale:1, duration:.5, ease:"back.out(1.6)" }, "-=.15")
+        .to([ring, word], { opacity:0, y:-10, duration:.35, ease:"power2.in" }, "+=.25")
+        .to(blob, { scale: reach, duration:.85, ease:"power3.in", borderRadius:"0%" }, "-=.15")
+        .to(veil, { opacity:0, duration:.4, ease:"power1.out" }, "-=.1");
+    });
+
+    // nav progress
+    safe("navprogress", function(){
+      ScrollTrigger.create({
+        trigger: document.body, start: "top top", end: "max", scrub: true,
+        onUpdate: function(self){ document.getElementById("progBar").style.width = (self.progress*100)+"%"; }
+      });
+    });
+
+    // hero load-in
+    safe("hero", function(){
+      var wm = document.querySelectorAll("#heroWordmark .row span");
+      gsap.set(wm, { opacity:0, y:"0.42em", rotate:2.5 });
+      gsap.to(wm, { opacity:1, y:0, rotate:0, duration:.8, stagger:.07, ease:"back.out(1.4)", delay:.1 });
+      gsap.from(".wm-aside", { opacity:0, y:16, duration:.8, delay:.75, ease:EASE });
+      gsap.from(".hero-lead", { opacity:0, y:16, duration:.8, delay:.5, ease:EASE });
+      gsap.from(".daychips .chip", { opacity:0, y:16, duration:.7, delay:.62, stagger:.06, ease:EASE });
+      gsap.from(".venuerow", { opacity:0, y:16, duration:.8, delay:.7, ease:EASE });
+    });
+
+    // scope panel + hero depth: no pinning/scroll-jacking — the black ticker section
+    // just stays put, exactly where it naturally sits. The parallax lives entirely on
+    // the cream hero itself as you scroll normally past it: the card levels out of its
+    // resting tilt and settles smaller, and the rest of the hero eases back, scales
+    // down and fades slightly, like it's sinking away — tied 1:1 to scroll (scrub, not
+    // a timed tween) over the hero's own natural height, no pin required.
+    safe("parallax", function(){
+      var content = document.querySelector(".hero-grid");
+      var blobs = document.querySelector(".hero-blobs");
+      ScrollTrigger.create({
+        trigger: "#top", start: "top top", end: "bottom top", scrub: 1,
+        onUpdate: function(self){
+          var p = self.progress;
+          gsap.set("#scopePanel", { rotate: -1+p, scale: 1-p*0.05, y: p*-14 });
+          if (content) gsap.set(content, { scale: 1-p*0.07, y: p*-24, opacity: 1-p*0.45 });
+          if (blobs) gsap.set(blobs, { opacity: 1-p*0.6 });
+        }
+      });
+    });
+
+    // hero parallax: cursor OR finger position shifts each depth layer by a different
+    // amount, like a camera looking into a diorama (near layers move more than far ones).
+    // Pointer events unify mouse and touch, so the same listener drives both — on a
+    // phone this fires as a finger drags/scrolls across the hero, no hover required.
+    safe("heroParallax", function(){
+      var hero = document.getElementById("top");
+      if (!hero) return;
+      var layers = [
+        { el: document.querySelector(".hb1"),      fx: 26, fy: 18 },
+        { el: document.querySelector(".hb2"),       fx: -16, fy: 22 },
+        { el: document.getElementById("scopeStack"),fx: 10, fy: 8 },
+        { el: document.getElementById("heroWordmark"), fx: -6, fy: 4 }
+      ].filter(function(l){ return !!l.el; });
+      hero.addEventListener("pointermove", function(e){
+        var r = hero.getBoundingClientRect();
+        var cx = ((e.clientX - r.left) / r.width) * 2 - 1;
+        var cy = ((e.clientY - r.top) / r.height) * 2 - 1;
+        layers.forEach(function(l){
+          gsap.to(l.el, { x: cx*l.fx, y: cy*l.fy, duration:.9, ease:"power3.out", overwrite:true });
+        });
+      }, { passive:true });
+      function resetHero(){
+        layers.forEach(function(l){
+          gsap.to(l.el, { x:0, y:0, duration:.7, ease:"power2.out", overwrite:true });
+        });
+      }
+      hero.addEventListener("pointerleave", resetHero);
+      hero.addEventListener("pointerup", resetHero);
+      hero.addEventListener("pointercancel", resetHero);
+    });
+
+    // porthole windows: each photo drifts behind its rim as the cursor OR a finger moves,
+    // like looking through ship windows at slightly different depths — nearer windows move
+    // more. Pointer events so this also plays on a phone as you scroll/drag past the band.
+    safe("portholeParallax", function(){
+      var band = document.getElementById("portholeBand");
+      if (!band) return;
+      var imgs = [
+        { el: document.getElementById("phLab"),    fx: 16, fy: 12 },
+        { el: document.getElementById("phBlue"),   fx: 24, fy: 16 },
+        { el: document.getElementById("phCampus"), fx: 12, fy: 9 }
+      ].filter(function(l){ return !!l.el; });
+      imgs.forEach(function(l){ gsap.set(l.el, { scale: 1.22 }); });
+      band.addEventListener("pointermove", function(e){
+        var r = band.getBoundingClientRect();
+        var cx = ((e.clientX - r.left) / r.width) * 2 - 1;
+        var cy = ((e.clientY - r.top) / r.height) * 2 - 1;
+        imgs.forEach(function(l){
+          gsap.to(l.el, { x: cx*l.fx, y: cy*l.fy, scale:1.22, duration:.9, ease:"power3.out", overwrite:true });
+        });
+        gsap.to(band, { "--tiltX": (cy*-3)+"deg", "--tiltY": (cx*3)+"deg", duration:.9, ease:"power3.out", overwrite:true });
+      }, { passive:true });
+      function resetPortholes(){
+        imgs.forEach(function(l){ gsap.to(l.el, { x:0, y:0, scale:1.22, duration:.7, ease:"power2.out", overwrite:true }); });
+      }
+      band.addEventListener("pointerleave", resetPortholes);
+      band.addEventListener("pointerup", resetPortholes);
+      band.addEventListener("pointercancel", resetPortholes);
+    });
+
+    // subtle depth: photos drift slightly as they cross the viewport (same safe non-pinning pattern as the scope panel)
+    safe("depth", function(){
+      var photos = gsap.utils.toArray(".act-photo img");
+      photos.forEach(function(img){
+        gsap.set(img, { scale: 1.14, yPercent: -6 });
+        ScrollTrigger.create({
+          trigger: img.closest(".act-photo"), start: "top bottom", end: "bottom top", scrub: 1,
+          onUpdate: function(self){ gsap.set(img, { scale: 1.14, yPercent: -6 + self.progress*12 }); }
+        });
+      });
+    });
+
+    // local banner: a much bigger photo gets a much bigger scroll-parallax travel
+    safe("localBanner", function(){
+      var img = document.getElementById("istFrontImg");
+      var band = document.getElementById("localBanner");
+      if (!img || !band) return;
+      gsap.set(img, { scale: 1.5, yPercent: -24 });
+      ScrollTrigger.create({
+        trigger: band, start: "top bottom", end: "bottom top", scrub: .6,
+        onUpdate: function(self){ gsap.set(img, { scale: 1.5, yPercent: -24 + self.progress*48 }); }
+      });
+    });
+
+    // ticker: pure-CSS marquee (see @keyframes tickerScroll) — always runs, even if GSAP
+    // fails to load, and stays in sync with the reduced-motion kill-switch above.
+
+    // schedule rail: each day column tilts toward the cursor or a dragging finger, like a
+    // physical card — bound to the stable wrapper via delegation since renderSchedule()
+    // rebuilds .day-col on every render. Pointer events so this also plays while a phone
+    // drags the rail sideways, alongside the existing native/touch scroll.
+    safe("scheduleTilt", function(){
+      var wrap = document.getElementById("railWrap");
+      if (!wrap) return;
+      wrap.addEventListener("pointermove", function(e){
+        var col = e.target.closest(".day-col");
+        if (!col) return;
+        var r = col.getBoundingClientRect();
+        var cx = ((e.clientX - r.left) / r.width) * 2 - 1;
+        var cy = ((e.clientY - r.top) / r.height) * 2 - 1;
+        gsap.to(col, { rotateX: cy*-5, rotateY: cx*5, y:-4, transformPerspective:900, transformOrigin:"center", duration:.5, ease:"power3.out", overwrite:true });
+      }, { passive:true });
+      wrap.addEventListener("pointerout", function(e){
+        var col = e.target.closest(".day-col");
+        if (!col) return;
+        if (col.contains(e.relatedTarget)) return;
+        gsap.to(col, { rotateX:0, rotateY:0, y:0, duration:.6, ease:"power2.out", overwrite:true });
+      });
+    });
+
+    // sponsors: same infinite-marquee treatment as the ticker, slower and steadier
+    safe("apoiosScroll", function(){
+      var track = document.getElementById("apoiosTrack");
+      if (!track) return;
+      var w = track.scrollWidth / 4;
+      gsap.fromTo(track, { x:0 }, { x:-w, duration:34, ease:"none", repeat:-1 });
+    });
+
+    // team list: a staggered "ladder" — each row eases in from a different offset,
+    // scrubbed to scroll position, so the names cascade into place as you pass them.
+    // renderTeam() rebuilds #teamList on every language toggle, so this exposes a
+    // rebuild hook (mirrors window.__initReveal) that renderTeam() calls after re-render.
+    safe("teamLadder", function(){
+      var triggers = [];
+      function initLadder(){
+        triggers.forEach(function(tr){ tr.kill(); });
+        triggers = [];
+        var rows = gsap.utils.toArray("#teamList .team-row");
+        rows.forEach(function(row, i){
+          var fromX = (i % 2 === 0) ? -28 : 28;
+          var tween = gsap.fromTo(row,
+            { x: fromX, opacity: .5 },
+            { x: 0, opacity: 1, ease:"none",
+              scrollTrigger: { trigger: row, start:"top 92%", end:"top 60%", scrub:.5 } });
+          if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
+        });
+      }
+      window.__rebuildTeamLadder = initLadder;
+      if (document.getElementById("teamList").children.length) initLadder();
+      else setTimeout(initLadder, 60);
+    });
+
+    // batch reveals (elements are already visible at rest; this re-plays them on scroll-in)
+    safe("reveal", function(){
+      var els;
+      function initReveal(){
+        els = gsap.utils.toArray("[data-reveal]");
+        gsap.set(els, { opacity:0, y:24 });
+        ScrollTrigger.batch(els, {
+          start: "top 88%",
+          onEnter: function(batch){ gsap.to(batch, { opacity:1, y:0, duration:.8, stagger:.08, ease:EASE }); },
+          once: true
+        });
+      }
+      // safety net: a jump-to-anchor click (nav links, #hash) or language-toggle
+      // re-render can land the scroll position past an element's trigger without
+      // firing a scroll event ScrollTrigger can detect a crossing from — catch
+      // anything left invisible that's already on screen. Runs continuously off
+      // scroll/resize (rAF-throttled) so it self-heals regardless of *why* an
+      // element ended up on screen.
+      var revealTicking = false;
+      function revealVisible(){
+        revealTicking = false;
+        if (!els) return;
+        els.forEach(function(el){
+          var op = parseFloat(getComputedStyle(el).opacity);
+          if (op < 1 && el.getBoundingClientRect().top < window.innerHeight * 0.95){
+            gsap.to(el, { opacity:1, y:0, duration:.5, ease:EASE, overwrite:true });
+          }
+        });
+      }
+      function queueReveal(){
+        if (revealTicking) return;
+        revealTicking = true;
+        requestAnimationFrame(revealVisible);
+      }
+      window.__initReveal = function(){ ScrollTrigger.refresh(); queueReveal(); };
+      window.addEventListener("scroll", queueReveal, { passive:true });
+      window.addEventListener("resize", queueReveal);
+      window.addEventListener("hashchange", queueReveal);
+      initReveal();
+      queueReveal();
+    });
+
+    // final cta bg kenburns
+    safe("kenburns", function(){
+      gsap.to(".finalcta .bgwrap img", {
+        scale:1.12, x:"-1%", y:"-1%", duration:16, ease:"sine.inOut", yoyo:true, repeat:-1
+      });
+      gsap.set(".scope-photo img", { scale:1.06 });
+      gsap.to(".scope-photo img", { scale:1.16, x:"-1.4%", y:"-1.2%", duration:14, ease:"sine.inOut", yoyo:true, repeat:-1 });
+    });
+
+    setTimeout(function(){
+      safe("refresh", function(){ ScrollTrigger.refresh(); });
+    }, 300);
+  } else {
+    document.querySelectorAll("[data-reveal]").forEach(function(el){ el.style.opacity=1; });
+    clearTimeout(window.__introFailsafe);
+    var veilNow = document.getElementById("introVeil");
+    if (veilNow && veilNow.parentNode) veilNow.parentNode.removeChild(veilNow);
+    document.body.style.overflow = "";
+  }
+
+  // custom cursor — a mouse/trackpad affordance; gate on actual pointer capability
+  // (not viewport width) so it survives a narrow desktop window and only real
+  // touchscreens fall back to the native cursor
+  if (window.matchMedia("(hover:hover) and (pointer:fine)").matches){
+    var cursor = document.getElementById("cursorDot");
+    var ring = document.getElementById("cursorRing");
+    var label = document.getElementById("cursorLabel");
+    var labelText = document.getElementById("cursorLabelText");
+    // start off-screen (not center-screen) so the ring/dot never flash as a static
+    // artifact at a fixed spot before the first real pointer move arrives
+    var mx = -100, my = -100, cx = mx, cy = my, hasMoved = false;
+    window.addEventListener("pointermove", function(e){
+      mx = e.clientX; my = e.clientY;
+      if (!hasMoved){ hasMoved = true; cx = mx; cy = my; cursor.style.opacity = 1; ring.style.opacity = 1; }
+      label.style.transform = "translate("+mx+"px,"+my+"px)";
+    }, { passive:true });
+    cursor.style.opacity = 0; ring.style.opacity = 0;
+    (function raf(){
+      cx += (mx-cx)*0.22; cy += (my-cy)*0.22;
+      cursor.style.transform = "translate("+cx+"px,"+cy+"px)";
+      ring.style.transform = "translate("+cx+"px,"+cy+"px)";
+      requestAnimationFrame(raf);
+    })();
+    function showLabel(text){ labelText.textContent = text; label.style.opacity = 1; }
+    function hideLabel(){ label.style.opacity = 0; }
+    document.querySelectorAll(".navhover, .cta, .act-row, .final-cta-btn").forEach(function(el){
+      el.addEventListener("mouseenter", function(){ showLabel(t().hoverNav || t().hoverCta); });
+      el.addEventListener("mouseleave", hideLabel);
+    });
+  }
+})();
+</script>
+</body>
+</html>
