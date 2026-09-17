@@ -22,7 +22,7 @@
   html{overflow-x:hidden;scroll-behavior:smooth;}
   /* nav is position:sticky, so a smooth-scrolled anchor needs this much clearance or its
      heading lands tucked underneath the bar; --nav-h is set from the nav's real height in JS */
-  #top,#atividades,#packs,#horario,#equipa,#faqs,#local{scroll-margin-top:var(--nav-h,72px);}
+  #top,#atividades,#packs,#horario,#equipa,#faqs,#local,.finalcta{scroll-margin-top:var(--nav-h,72px);}
   body{font-family:'Newsreader',Georgia,serif;font-weight:300;overflow-x:clip;position:relative;cursor:none;}
   ::selection{background:var(--accent);color:var(--paper);}
   a{color:inherit;text-decoration:none;}
@@ -39,6 +39,14 @@
   .navToggle.active span:nth-child(2){opacity:0;}
   .navToggle.active span:nth-child(3){transform:translateY(-5.5px) rotate(-45deg);}
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important;} html{scroll-behavior:auto;} }
+  /* Slide-style snap for the two "full beat" sections only (hero open, final CTA close) —
+     desktop/pointer-precise only per request, so a laptop trackpad or mouse wheel settles
+     into them but touch scrolling and every section in between stays free scroll. proximity
+     (not mandatory) means it only pulls in near a boundary, so it can never trap a scroll. */
+  @media (min-width:900px) and (pointer:fine){
+    html{scroll-snap-type:y proximity;}
+    #top,.finalcta{scroll-snap-align:start;scroll-snap-stop:always;}
+  }
 
   /* mix-blend-mode forces the compositor to re-blend this layer with everything under it
      on every frame it's visible, including every scroll frame — same isolation trick as
