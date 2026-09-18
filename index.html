@@ -22,7 +22,7 @@
   html{overflow-x:hidden;scroll-behavior:smooth;}
   /* nav is position:sticky, so a smooth-scrolled anchor needs this much clearance or its
      heading lands tucked underneath the bar; --nav-h is set from the nav's real height in JS */
-  #top,#atividades,#packs,#horario,#equipa,#faqs,#local,.apoios,.finalcta{scroll-margin-top:var(--nav-h,72px);}
+  #top,#atividades,#packs,#horario,#equipa,#faqs,#local{scroll-margin-top:var(--nav-h,72px);}
   body{font-family:'Newsreader',Georgia,serif;font-weight:300;overflow-x:clip;position:relative;cursor:none;}
   ::selection{background:var(--accent);color:var(--paper);}
   a{color:inherit;text-decoration:none;}
@@ -39,10 +39,6 @@
   .navToggle.active span:nth-child(2){opacity:0;}
   .navToggle.active span:nth-child(3){transform:translateY(-5.5px) rotate(-45deg);}
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important;} html{scroll-behavior:auto;} }
-  /* Slide-style paging is handled in JS (see bindSlidePaging), not CSS scroll-snap — with this
-     many closely-spaced sections, native scroll-snap-type:proximity reliably got stuck partway
-     down the page under real trackpad input (verified with simulated wheel sequences), so the
-     section-to-section jump is driven explicitly by a wheel listener instead. */
 
   /* mix-blend-mode forces the compositor to re-blend this layer with everything under it
      on every frame it's visible, including every scroll frame — same isolation trick as
@@ -1098,57 +1094,6 @@
     try { fn(); }
     catch(e){ if (window.console) console.error("[enef:"+label+"]", e); }
   }
-
-  // slide-deck paging: one wheel gesture = one section, desktop/mouse-precise only.
-  // Independent of GSAP on purpose — this is scroll behavior, not decoration, so it still
-  // works if the animation CDN fails to load. A section taller than the viewport (team list,
-  // FAQ) scrolls through its own content natively first; only once you've reached that
-  // section's edge does the next wheel tick jump you to the next/previous section.
-  safe("slidePaging", function(){
-    var desktopMQ = window.matchMedia("(min-width:900px) and (pointer:fine)");
-    var sections = ["#top","#atividades","#packs","#horario","#equipa","#faqs","#local",".apoios",".finalcta"]
-      .map(function(sel){ return document.querySelector(sel); })
-      .filter(Boolean);
-    if (sections.length < 2) return;
-
-    var locked = false, lockTimer = null;
-    var COOLDOWN = 750; // swallows one trackpad flick's whole burst of wheel events
-
-    function navH(){
-      var n = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--nav-h"));
-      return isNaN(n) ? 72 : n;
-    }
-    function sectionTop(el){ return el.getBoundingClientRect().top + window.scrollY - navH(); }
-    function currentIndex(){
-      var y = window.scrollY, idx = 0;
-      for (var i=0;i<sections.length;i++){ if (sectionTop(sections[i]) <= y + 2) idx = i; }
-      return idx;
-    }
-    // has this section already been scrolled to the edge in the direction we're heading?
-    function atEdge(el, dir){
-      var r = el.getBoundingClientRect();
-      return dir > 0 ? r.bottom <= window.innerHeight + 2 : r.top >= navH() - 2;
-    }
-    function goTo(idx){
-      idx = Math.max(0, Math.min(sections.length - 1, idx));
-      window.scrollTo({ top: sectionTop(sections[idx]), behavior: reduceMotion ? "auto" : "smooth" });
-      locked = true;
-      clearTimeout(lockTimer);
-      lockTimer = setTimeout(function(){ locked = false; }, COOLDOWN);
-    }
-    window.addEventListener("wheel", function(e){
-      if (!desktopMQ.matches) return;
-      if (Math.abs(e.deltaY) < 2) return; // ignore trackpad momentum dregs
-      if (locked){ e.preventDefault(); return; }
-      var dir = e.deltaY > 0 ? 1 : -1;
-      var idx = currentIndex();
-      if (!atEdge(sections[idx], dir)) return; // more of this section to scroll — let it scroll natively
-      var next = idx + dir;
-      if (next < 0 || next >= sections.length) return; // already first/last section
-      e.preventDefault();
-      goTo(next);
-    }, { passive:false });
-  });
 
   if (!reduceMotion && window.gsap && window.ScrollTrigger){
     gsap.registerPlugin(ScrollTrigger);
