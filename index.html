@@ -7,6 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Space+Mono:wght@400;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<!-- self-hosted so the hero's entrance animation never waits on a third-party CDN round-trip
+     (or fails outright if that origin is unreachable) — same GSAP 3.12.2 build, just same-origin -->
+<link rel="preload" href="assets/gsap.min.js" as="script">
+<link rel="preload" href="assets/scrolltrigger.min.js" as="script">
+<link rel="preload" href="assets/photo1.jpg" as="image" fetchpriority="high">
 <style>
   :root{
     --ink:#14161A; --paper:#F2EFE7; --accent:#1F44FF;
@@ -462,7 +467,7 @@
           <span class="rec"><i></i><span data-i18n="rec">Ao vivo</span></span>
         </div>
         <div class="scope-photo">
-          <img src="assets/photo1.jpg" alt="Lisboa ao entardecer" decoding="async" fetchpriority="high">
+          <img src="assets/photo1.jpg" alt="Lisboa ao entardecer" decoding="async" fetchpriority="high" width="760" height="429">
           <div class="grad"></div>
         </div>
         <div class="scope-mid mono"><span data-i18n="until">até ao evento</span><span>SI</span></div>
@@ -560,7 +565,7 @@
 
   <section id="local" class="local">
     <div class="local-banner" id="localBanner">
-      <img id="istFrontImg" src="assets/photo2.jpg" alt="Fachada principal do Instituto Superior Técnico" loading="lazy" decoding="async">
+      <img id="istFrontImg" src="assets/photo2.jpg" alt="Fachada principal do Instituto Superior Técnico" loading="lazy" decoding="async" width="760" height="253">
       <div class="cap mono" data-i18n="placeCap">Pavilhão Central · Alameda</div>
       <div class="credit mono">Foto: <a href="https://tecnico.ulisboa.pt/pt/sobre-o-tecnico/campi/alameda/" target="_blank" rel="noopener">Técnico ULisboa</a></div>
     </div>
@@ -575,7 +580,7 @@
       </div>
     </div>
     <div class="local-r">
-      <img class="map-img" alt="Mapa: Instituto Superior Técnico, Alameda, Lisboa" src="assets/photo3.jpg" loading="lazy" decoding="async">
+      <img class="map-img" alt="Mapa: Instituto Superior Técnico, Alameda, Lisboa" src="assets/photo3.jpg" loading="lazy" decoding="async" width="640" height="640">
       <div class="fig mono" data-i18n="navPlace">Local</div>
       <div class="coordlabel mono">38.7367,-9.1395</div>
       <div class="map-credit mono">&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>
@@ -588,7 +593,7 @@
   </section>
 
   <section class="finalcta">
-    <div class="bgwrap"><img src="assets/photo4.jpg" alt="" loading="lazy" decoding="async"><div class="bggrad"></div></div>
+    <div class="bgwrap"><img src="assets/photo4.jpg" alt="" loading="lazy" decoding="async" width="760" height="325"><div class="bggrad"></div></div>
     <div class="content">
       <h2 class="final-title display" data-reveal data-i18n="finalTitle">Vemo-nos em Lisboa.</h2>
       <div class="final-row">
@@ -632,8 +637,8 @@
     </div>
   </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script><script>
+<script src="assets/gsap.min.js"></script>
+<script src="assets/scrolltrigger.min.js"></script><script>
 (function(){
   "use strict";
   // shared motion signature: the one eased curve already used for this site's mechanical
@@ -835,7 +840,7 @@
           '<span class="act-num mono">0'+(i+1)+'</span>'+
           '<div><h3 class="act-title display">'+a.title+'</h3><span class="act-tag mono">'+a.tag+'</span></div>'+
           '<p class="act-body">'+a.body+'</p>'+
-          '<div class="act-photo" style="transform:rotate('+tilts[i]+')"><img src="'+a.img+'" alt="" loading="lazy" decoding="async"></div>'+
+          '<div class="act-photo" style="transform:rotate('+tilts[i]+')"><img src="'+a.img+'" alt="" loading="lazy" decoding="async" width="759" height="429"></div>'+
         '</div>'+
       '</div>';
     }).join("") + '</div>';
