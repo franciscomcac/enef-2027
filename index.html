@@ -503,7 +503,6 @@
   .ist-pin span{position:absolute;left:16px;top:-12px;white-space:nowrap;background:var(--ink);color:var(--paper);font-family:'Anton',sans-serif;font-size:15px;letter-spacing:.02em;text-transform:uppercase;padding:3px 9px;}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -1615,7 +1614,8 @@
   function fit(cv){ var r=cv.getBoundingClientRect(); cv.width=Math.max(1,Math.round(r.width*DPR)); cv.height=Math.max(1,Math.round(r.height*DPR)); return r; }
   function whenVisible(el, tick){
     var on=false, raf=0;
-    function loop(t){ tick(t); raf=requestAnimationFrame(loop); }
+    var lastT=0;
+    function loop(t){ if (t-lastT>=15){ lastT=t; tick(t); } raf=requestAnimationFrame(loop); }
     new IntersectionObserver(function(en){
       var v=en[0].isIntersecting;
       if (v && !on){ on=true; raf=requestAnimationFrame(loop); }
@@ -1874,8 +1874,10 @@
       if (bar) bar.style.width=(cam.v/total*100)+"%";
     }
     G.to(cam, { v:total, ease:"none", scrollTrigger:{ trigger:scene, start:"top top", end:function(){ return "+="+Math.round(innerHeight*3.4); },
-      pin:true, scrub:1, anticipatePin:1, refreshPriority:1, onUpdate:function(self){ vel=self.getVelocity(); } } });
+      pin:true, scrub:.4, anticipatePin:1, refreshPriority:1, onUpdate:function(self){ vel=self.getVelocity(); } } });
     render();
+    var dec=function(){ scene.querySelectorAll("img").forEach(function(im){ if(im.decode) im.decode().catch(function(){}); }); };
+    if (window.requestIdleCallback) requestIdleCallback(dec,{timeout:2500}); else setTimeout(dec,1500);
     // warp-speed starfield, velocity-coupled to the scroll
     var cv=document.getElementById("flyStars"), ctx=cv.getContext("2d"), W, H, stars=[];
     function rs(){ var r=fit(cv); W=r.width; H=r.height; stars=[]; for (var i=0;i<(LOW?80:150);i++) stars.push(newStar(true)); }
@@ -1955,7 +1957,9 @@
   // render loop: mouse-driven camera orbit + idle drift + depth shading
   var t0=performance.now(), vis=false, rafId=0;
   new IntersectionObserver(function(en){ vis=en[0].isIntersecting; if(vis&&!rafId) rafId=requestAnimationFrame(loop); }).observe(stage);
+  var lastF=0;
   function loop(now){
+    if (now-lastF<15){ rafId = vis ? requestAnimationFrame(loop) : 0; return; } lastF=now;
     var t=(now-t0)/1000;
     tx+=(mx-tx)*.06; ty+=(my-ty)*.06;
     var idle=reduce?0:Math.sin(t*.6);
@@ -1965,25 +1969,15 @@
     for(var i=0;i<slots.length;i++){ var c=Math.cos((i*STEP+rot.a+spin)*Math.PI/180); slots[i].style.opacity=(.45+.55*Math.max(0,c)).toFixed(3); }
     rafId = vis ? requestAnimationFrame(loop) : 0;
   }
-  // one pinned timeline: first the crane shot (overhead -> eye level, ring spins in), then each scroll step = one pack
+  // pinned: each scroll step = one pack; ring spins in once when it first comes into view
   if (G&&window.ScrollTrigger&&!reduce){
-    var grid=document.getElementById("packsStage"), lastI=-1, INTRO=.22;
-    var steps=[0]; for(var k=0;k<N;k++) steps.push(INTRO+k*(1-INTRO)/(N-1));
-    function crane(p){
-      var e=1-Math.pow(1-Math.min(1,p/INTRO),3), k=1-e;
-      cam.style.transform="translate3d(0,"+(-140*k)+"px,"+(-500*k)+"px) rotateX("+(62*k)+"deg) rotateZ("+(-8*k)+"deg)";
-      spin=300*k;
-    }
-    crane(0);
-    ScrollTrigger.create({ trigger:grid, start:"bottom bottom", end:function(){ return "+="+Math.round(innerHeight*3.2); },
+    var grid=document.getElementById("packsStage"), lastI=-1, sp={v:300};
+    spin=300;
+    new IntersectionObserver(function(en,ob){ if(en[0].isIntersecting){ ob.disconnect(); G.to(sp,{v:0,duration:1.6,ease:"expo.out",onUpdate:function(){ spin=sp.v; }}); } },{threshold:.35}).observe(stage);
+    ScrollTrigger.create({ trigger:grid, start:"bottom bottom", end:function(){ return "+="+Math.round(innerHeight*2.6); },
       pin:true, anticipatePin:1, refreshPriority:1,
-      snap:{ snapTo:steps, duration:{min:.25,max:.7}, delay:.08, ease:"power2.inOut" },
-      onUpdate:function(self){
-        var p=self.progress; crane(p);
-        if(p<INTRO*.6) return;
-        var i=Math.max(0,Math.min(N-1,Math.round((p-INTRO)/(1-INTRO)*(N-1))));
-        if(i!==lastI){ lastI=i; if(i!==cur) pick(i); }
-      } });
+      snap:{ snapTo:1/(N-1), duration:{min:.2,max:.5}, delay:.05, ease:"power2.inOut" },
+      onUpdate:function(self){ var i=Math.round(self.progress*(N-1)); if(i!==lastI){ lastI=i; if(i!==cur) pick(i); } } });
     ScrollTrigger.refresh();
   }
   stage.tabIndex=0;
@@ -2059,7 +2053,9 @@
     addEventListener("resize",function(){ map.invalidateSize(); });
   }
   // only boot Leaflet when the section is close
-  new IntersectionObserver(function(en,ob){ if(en[0].isIntersecting){ ob.disconnect(); init(); } },{rootMargin:"600px"}).observe(el);
+  // Leaflet is loaded on demand (not render-blocking in <head>)
+  function load(){ if(window.L) return init(); var s=document.createElement("script"); s.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; s.integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"; s.crossOrigin="anonymous"; s.onload=init; s.onerror=function(){ el.remove(); }; document.head.appendChild(s); }
+  new IntersectionObserver(function(en,ob){ if(en[0].isIntersecting){ ob.disconnect(); load(); } },{rootMargin:"900px"}).observe(el);
 })();
 </script>
 </body></html>
